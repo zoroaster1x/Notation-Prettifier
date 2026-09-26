@@ -68,10 +68,14 @@ export const DEFAULT_SHORTCUTS_TEXT = [
   "+- => \u00b1",
   "-+ => \u2213",
   "",
-  "# Degree sign",
+  "# Degree sign. The [ ] forms are HTML safe; an angle bracket at the start of",
+  "# a line can be read by Markdown as an HTML tag and swallow the lines below.",
   "<degrees> => \u00b0",
   "<degree> => \u00b0",
   "<deg> => \u00b0",
+  "[degrees] => \u00b0",
+  "[degree] => \u00b0",
+  "[deg] => \u00b0",
 ].join("\n");
 
 const GREEK_PATTERN = "(?<!\\\\)\\b(" + GREEK_NAMES.join("|") + ")\\b";

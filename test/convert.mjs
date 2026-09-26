@@ -86,6 +86,8 @@ eq(
 console.log("--- degree shortcut");
 eq("degree in prose", bake("Turn 5<degrees>").text, "Turn 5\u00b0");
 eq("degree in a formula", bake("x = 30<degrees>").text, "$x = 30\u00b0$");
+eq("html safe degree in prose", bake("Turn 5[deg]").text, "Turn 5\u00b0");
+eq("html safe degrees in a formula", bake("x = 30[degrees]").text, "$x = 30\u00b0$");
 
 console.log("--- Symbols Prettifier arrow and sign shortcuts");
 eq("arrow in prose", bake("Miosis -> constricted pupil").text, "Miosis \u2192 constricted pupil");

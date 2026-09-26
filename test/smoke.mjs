@@ -56,7 +56,7 @@ check("editor extension registered", registered.editorExtensions.length === 1, J
 check("post processor registered", registered.postProcessors.length === 1);
 check("settings tab registered", registered.settingTabs.length === 1);
 const commandIds = (registered.commands || []).map((command) => command.id);
-for (const id of ["convert-selection", "convert-note", "preview-note", "toggle-live-preview"]) {
+for (const id of ["convert-selection", "convert-note", "preview-note", "check-current-line", "toggle-live-preview"]) {
   check("command " + id, commandIds.indexOf(id) !== -1, commandIds.join(","));
 }
 
@@ -93,6 +93,15 @@ const code = codeBlock.appendChild(document.createElement("code"));
 code.textContent = "L = L + F";
 processor(codeBlock);
 check("code untouched", codeBlock.textContent === "L = L + F", codeBlock.textContent);
+
+const tagBlock = document.createElement("div");
+const tag = document.createElement("deg");
+tag.textContent = " and the rest of the line";
+tagBlock.appendChild(tag);
+processor(tagBlock);
+check("tag-like shortcut unwrapped", tagBlock.textContent.indexOf("\u00b0") === 0, tagBlock.textContent);
+check("swallowed text kept", tagBlock.textContent.indexOf("and the rest of the line") !== -1, tagBlock.textContent);
+check("tag becomes a glyph element", Boolean(tagBlock.querySelector(".np-glyph")));
 
 console.log("--- live layer");
 const editorExtension = registered.editorExtensions[0];
@@ -171,6 +180,25 @@ noteCommand.editorCallback({
 });
 check("note command writes the converted note", Boolean(noteText && noteText.indexOf("$L = L + F$") !== -1), JSON.stringify(noteText));
 check("note command converts the sqrt line", Boolean(noteText && noteText.indexOf("$s=r-\\sqrt{r^{2}-y^{2}}$") !== -1), JSON.stringify(noteText));
+
+console.log("--- diagnostics");
+const diagnostics = registered.commands.find((command) => command.id === "check-current-line");
+const reportLine = "Derived from approximate Snell's law = n^(i) = n^(')i^(')";
+diagnostics.editorCallback({
+  getCursor: () => ({ line: 0, ch: reportLine.indexOf("n^") + 2 }),
+  getLine: () => reportLine,
+  getSelection: () => "",
+  replaceSelection() {},
+  replaceRange() {},
+  getValue: () => reportLine,
+  lastLine: () => 0,
+});
+const report = obsidian.Modal.instances[obsidian.Modal.instances.length - 1];
+check("diagnostics modal opened", Boolean(report && report.opened));
+const reportText = report ? report.contentEl.textContent : "";
+check("diagnostics finds the span", reportText.indexOf("Formula spans: 1") !== -1, reportText.slice(0, 220));
+check("diagnostics shows the latex", reportText.indexOf("n^{i} = n'i'") !== -1, reportText.slice(0, 300));
+check("diagnostics names the cursor rule", reportText.indexOf("cursor is inside this span") !== -1, reportText.slice(0, 300));
 
 console.log("--- settings");
 const tab = registered.settingTabs[0];

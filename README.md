@@ -76,6 +76,7 @@ builds the bundle and copies the files into place. It needs `bun` or `npm`; with
 | **Convert notation in the selection or line to LaTeX** | With a selection, converts just that text. With only a cursor, converts the current line. Always inline `$...$`. | `Ctrl/Cmd + Shift + L` |
 | **Convert notation in the whole note to LaTeX** | Converts every line in the note. A line that is exactly one formula becomes `$$...$$`, unless you turn that off in settings. | none |
 | **Preview the whole note conversion** | Opens a modal with the converted note and Apply and Cancel buttons. Nothing is written until Apply. | none |
+| **Check the current line (diagnostics)** | Opens a report: the line, every formula span the engine found and its LaTeX, the shortcut matches, the editor mode, and whether the cursor is inside a span so it stays raw. Use it when a line does not render as expected. | none |
 | **Toggle live preview** | Turns the live rendering on or off without opening settings. | none |
 
 All three conversion commands go through Obsidian's normal undo, so a single `Ctrl/Cmd + Z` restores the note. The commands never run on their own; the plugin does not touch a note unless you ask.
@@ -248,9 +249,10 @@ Shortcuts are literal text replacements. They apply to plain text, headings, lis
 | `>=` | `≥` |
 | `+-` | `±` |
 | `-+` | `∓` |
-| `<degrees>` | `°` |
-| `<degree>` | `°` |
-| `<deg>` | `°` |
+| `<degrees>`, `<degree>`, `<deg>` | `°` |
+| `[degrees]`, `[degree]`, `[deg]` | `°` |
+
+The square bracket degree forms exist because Markdown reads an angle bracket at the start of a line as an HTML tag. A line that begins with `<deg>` can still swallow the lines below into one raw HTML block, so prefer `[deg]`, or keep `<deg>` in the middle of a line. In Reading view the plugin unwraps a tag-like shortcut element and puts the swallowed text back, but the Markdown parser has already made its choice by then.
 
 Inside a formula the same input becomes LaTeX instead of a glyph: `A -> B` renders from `$A \to B$`, while `Miosis ->` becomes `Miosis →` in prose. That is deliberate: prose gets the glyph, formulas get LaTeX.
 
@@ -398,7 +400,8 @@ These are honest gaps, not bugs waiting to be reported.
 - **Table cells are separate.** A `|` ends a span, so a formula cannot span two cells.
 - **A display formula must be alone on its line.** Anything before or after it keeps the inline form.
 - **Multi-letter subscripts follow the source.** `F_LM` becomes `F_{LM}`, and `F_LMx(` is read as `F_{LM}\times(`.
-- **Shortcuts are literal and global.** Choose distinctive literals; a `<` or a single letter would be a bad shortcut.
+- **Shortcuts are literal and global.** Choose distinctive literals; a `<` or a single letter would be a bad shortcut. An angle-bracket shortcut at the start of a line can be read as an HTML tag by Markdown and swallow the lines below, so use the square bracket degree forms (`[deg]`) or keep it mid-line.
+- **A formula is drawn only when the cursor is not strictly inside it.** A cursor at either edge still draws it, so a freshly typed formula renders without moving the cursor; place the cursor inside the span to edit the raw text.
 - **Other decoration plugins can overlap.** Disable Symbols Prettifier; other math or decoration plugins may also draw over the same range.
 
 ---
@@ -434,10 +437,10 @@ The synthetic suites need nothing but the repository:
 
 ```bash
 bun esbuild.config.mjs production   # build main.js
-bun test/convert.mjs                # the conversion engine, 65 checks
+bun test/convert.mjs                # the conversion engine, 67 checks
 bun test/editor.mjs                 # the live window scanner, 13 checks
 bun test/examples.mjs               # the documented examples in this README, 44 checks
-bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 39 checks
+bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 49 checks
 bun test/privacy.mjs                # no personal paths in tracked files
 bun test/bench.mjs                  # performance report and bounds
 ```
@@ -464,10 +467,10 @@ Last run on a library of 225 old optometry notes (23,860 lines):
 | Formulas wrapped | 684, across 63 files; 162 files needed no change |
 | Protected regions preserved | 3,317 of 3,317 |
 | Converted lines rendered through the Reading view | 300 lines, 375 inline elements, no empty formula |
-| Engine checks (`test/convert.mjs`) | 65 pass, 0 fail |
+| Engine checks (`test/convert.mjs`) | 67 pass, 0 fail |
 | Live window scanner (`test/editor.mjs`) | 13 pass, 0 fail |
 | Documented examples (`test/examples.mjs`) | 44 pass, 0 fail |
-| Bundle checks (`test/smoke.mjs`) | 39 pass, 0 fail |
+| Bundle checks (`test/smoke.mjs`) | 49 pass, 0 fail |
 | Performance (`test/bench.mjs`) | 0 over bound, 0.37 ms warm keystroke on a 1 MB note |
 
 The documented examples in this README are pinned by `test/examples.mjs`, so a rule change that disagrees with the manual fails the suite.
@@ -630,6 +633,7 @@ theta = 2  ==>  $\theta = 2$
 ΔE=hf=hc/λ  ==>  $ΔE=hf=hc/λ$
 Miosis -> constricted pupil  ==>  Miosis → constricted pupil
 5<degrees>  ==>  5°
+5[deg]  ==>  5°
 x = 30<degrees>  ==>  $x = 30°$
 rough -- dash  ==>  rough – dash
 0.8+2.34375--3.125=0.01875  ==>  $0.8+2.34375-3.125=0.01875$

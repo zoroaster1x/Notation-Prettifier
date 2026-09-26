@@ -18,9 +18,16 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Modal, Notice, Plugin, Setting } from "obsidian";
+import { Modal, Notice, Plugin, Setting, editorLivePreviewField } from "obsidian";
 import { createEditorExtension, refreshEditors } from "./editor.js";
-import { bakeText, bakeTextAsync, candidateRegex, convertSpan } from "./engine.js";
+import {
+  bakeText,
+  bakeTextAsync,
+  candidateRegex,
+  convertSpan,
+  detectShortcutMatches,
+  detectSpans,
+} from "./engine.js";
 import { readingProcessor } from "./reading.js";
 import { compileRules, compileShortcuts, mathWordsFor, shortcutTokenRegex } from "./rules.js";
 import { DEFAULT_SETTINGS, NotationPrettifierSettingTab } from "./settings.js";
@@ -64,6 +71,26 @@ class ConversionPreviewModal extends Modal {
   }
 }
 
+class ReportModal extends Modal {
+  constructor(app, title, text) {
+    super(app);
+    this.title = title;
+    this.text = text;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.addClass("np-modal");
+    contentEl.createEl("h3", { text: this.title });
+    const scroller = contentEl.createDiv({ cls: "np-preview" });
+    scroller.createEl("pre", { text: this.text });
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
 export default class NotationPrettifierPlugin extends Plugin {
   async onload() {
     this._cache = null;
@@ -85,6 +112,11 @@ export default class NotationPrettifierPlugin extends Plugin {
       id: "preview-note",
       name: "Preview the whole note conversion",
       editorCallback: (editor) => this.previewNote(editor),
+    });
+    this.addCommand({
+      id: "check-current-line",
+      name: "Check the current line (diagnostics)",
+      editorCallback: (editor) => this.checkCurrentLine(editor),
     });
     this.addCommand({
       id: "toggle-live-preview",
@@ -261,5 +293,65 @@ export default class NotationPrettifierPlugin extends Plugin {
     this.settings.livePreview = !this.settings.livePreview;
     await this.saveSettings();
     new Notice("Notation Prettifier: live preview " + (this.settings.livePreview ? "on" : "off") + ".");
+  }
+
+  editorMode(editor) {
+    try {
+      const cm = editor.cm;
+      if (!cm || !cm.state || typeof cm.state.field !== "function") return "unknown";
+      if (editorLivePreviewField) {
+        try {
+          return cm.state.field(editorLivePreviewField) ? "Live Preview" : "Source mode";
+        } catch (error) {
+          return "unknown";
+        }
+      }
+      return "unknown (this Obsidian does not expose the live preview field)";
+    } catch (error) {
+      return "unknown";
+    }
+  }
+
+  // Explains what the engine sees on one line, which is the fastest way to tell
+  // a cursor sitting inside a span from a rule that did not fire.
+  checkCurrentLine(editor) {
+    const cursor = editor.getCursor();
+    const line = editor.getLine(cursor.line);
+    const spans = detectSpans(line, {
+      mathWords: this.mathWords(),
+      shortcutToken: this.shortcutToken(),
+    });
+    const shortcuts = detectShortcutMatches(line, {
+      shortcuts: this.shortcuts(),
+      exclude: spans,
+    });
+    const report = [
+      "Notation Prettifier " + this.manifest.version,
+      "Live preview: " + (this.settings.livePreview ? "on" : "off") + ", Reading view: " + (this.settings.readingView ? "on" : "off"),
+      "Editor: " + this.editorMode(editor),
+      "",
+      "Line " + (cursor.line + 1) + ": " + line,
+      "",
+      "Formula spans: " + spans.length,
+    ];
+    for (const span of spans) {
+      const inside = cursor.ch > span.from && cursor.ch < span.to;
+      report.push(
+        "  [" + span.from + ".." + span.to + "] " + JSON.stringify(span.raw) + "  ->  $" + this.convert(span.raw) + "$" +
+          (inside ? "   <- the cursor is inside this span, so it stays raw" : "")
+      );
+    }
+    if (!spans.length) report.push("  none. If you expected one, the line needs a relation (=, an arrow), or a script or prime on a symbol base.");
+    report.push("Shortcut matches: " + shortcuts.length);
+    for (const match of shortcuts) {
+      const inside = cursor.ch > match.from && cursor.ch < match.to;
+      report.push(
+        "  [" + match.from + ".." + match.to + "] -> " + match.replacement + (inside ? "   <- the cursor is inside this match, so it stays raw" : "")
+      );
+    }
+    report.push("");
+    report.push("A formula is drawn only when the cursor is not strictly inside it.");
+    report.push("Source mode never draws; switch to Live Preview or Reading view.");
+    new ReportModal(this.app, "Notation Prettifier check", report.join("\n")).open();
   }
 }

@@ -77,6 +77,9 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("np-settings");
+    new Setting(containerEl)
+      .setName("Notation Prettifier " + (this.plugin.manifest ? this.plugin.manifest.version : ""))
+      .setHeading();
 
     this.renderBehaviour(containerEl);
     this.renderGroups(containerEl);

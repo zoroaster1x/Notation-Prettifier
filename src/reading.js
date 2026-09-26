@@ -66,6 +66,36 @@ function makeGlyphElement(replacement) {
   return host;
 }
 
+// An angle-bracket shortcut such as <deg> looks like an HTML tag to the
+// Markdown parser, which turns it into an element and can pull the rest of the
+// line (or the lines below) inside it. The reading view puts the glyph in its
+// place and moves the swallowed children back out.
+function shortcutTagMap(plugin) {
+  if (!plugin._shortcutTags) {
+    const map = new Map();
+    for (const shortcut of plugin.shortcuts()) {
+      const match = /^<([A-Za-z][A-Za-z0-9-]*)>$/.exec(shortcut.literal);
+      if (match) map.set(match[1].toUpperCase(), shortcut.replacement);
+    }
+    plugin._shortcutTags = map;
+  }
+  return plugin._shortcutTags;
+}
+
+function unwrapShortcutTags(element, plugin) {
+  const map = shortcutTagMap(plugin);
+  if (!map.size) return;
+  for (const tag of Array.from(element.querySelectorAll("*"))) {
+    const replacement = map.get(tag.tagName);
+    if (replacement === undefined) continue;
+    const parent = tag.parentNode;
+    if (!parent) continue;
+    parent.insertBefore(makeGlyphElement(replacement), tag);
+    while (tag.firstChild) parent.insertBefore(tag.firstChild, tag);
+    parent.removeChild(tag);
+  }
+}
+
 function renderTextNode(node, plugin) {
   const value = node.nodeValue || "";
   if (!value || value.length < 2) return;
@@ -103,6 +133,7 @@ function renderTextNode(node, plugin) {
 }
 
 export function processElement(element, plugin) {
+  unwrapShortcutTags(element, plugin);
   for (let child = element.firstChild; child; ) {
     const next = child.nextSibling;
     if (child.nodeType === 3) {

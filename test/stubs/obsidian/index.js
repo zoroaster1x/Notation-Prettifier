@@ -223,6 +223,7 @@ class Modal {
     this.containerEl.appendChild(this.contentEl);
     this.opened = false;
     this.closed = false;
+    Modal.instances.push(this);
   }
   open() {
     this.opened = true;
@@ -233,6 +234,7 @@ class Modal {
     if (this.onClose) this.onClose();
   }
 }
+Modal.instances = [];
 
 class Notice {
   constructor(message) {
@@ -258,6 +260,8 @@ function renderMath(source, display) {
   return host;
 }
 
+const editorLivePreviewField = { __livePreview: true };
+
 module.exports = {
   Component,
   Events,
@@ -273,5 +277,6 @@ module.exports = {
   DropdownComponent,
   ButtonComponent,
   renderMath,
+  editorLivePreviewField,
 };
 module.exports.default = module.exports;
