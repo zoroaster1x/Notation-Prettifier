@@ -1,0 +1,21 @@
+# Build output only; src/main.js is the tracked entry point.
+/main.js
+node_modules/
+*.log
+
+# Local test configuration: real note paths live here, never in git.
+.testenv
+
+# Local machine notes: real paths, never in git. The tracked AGENTS.md points
+# at this file by name; only the file itself stays out of the repository.
+PRIVATE_AGENTS.md
+
+# Test output.
+test/out/
+test/.cache/
+
+# Editor and tool caches.
+__pycache__/
+*.pyc
+.vscode/
+.idea/

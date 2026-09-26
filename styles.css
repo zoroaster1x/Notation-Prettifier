@@ -1,0 +1,83 @@
+/* Notation Prettifier: rendered math keeps its line height. */
+.np-math {
+  white-space: nowrap;
+}
+
+.np-math mjx-container {
+  margin: 0 !important;
+}
+
+.np-glyph {
+  display: inline;
+}
+
+/* Settings */
+
+.np-settings .np-textarea {
+  width: 100%;
+  min-height: 5em;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+}
+
+.np-hint {
+  margin: -0.4em 0 1.4em;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.np-hint-error {
+  color: var(--text-error);
+}
+
+.np-try-source,
+.np-try-preview {
+  margin-bottom: 1.2em;
+}
+
+.np-try-source {
+  padding: 0.6em 0.8em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--font-ui-smaller);
+}
+
+.np-try-preview {
+  padding-left: 0.9em;
+  border-left: 3px solid var(--background-modifier-border);
+}
+
+.np-reference pre {
+  padding: 0.6em 0.8em;
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--font-ui-smaller);
+}
+
+.np-reference-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+/* Conversion preview modal */
+
+.np-modal .np-preview {
+  max-height: 55vh;
+  overflow: auto;
+  padding: 0.6em 0.8em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+.np-modal .np-preview pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--font-ui-smaller);
+}

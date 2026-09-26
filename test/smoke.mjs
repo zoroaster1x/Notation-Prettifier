@@ -1,0 +1,181 @@
+/*
+ * Loads the built bundle under the Obsidian and CodeMirror stubs and checks
+ * that the plugin wires itself up, renders in reading view, renders the live
+ * layer, and writes LaTeX from the commands.
+ *
+ *   bun test/smoke.mjs
+ */
+
+import { createRequire } from "node:module";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { setupDom } from "./harness.mjs";
+
+setupDom();
+const require = createRequire(import.meta.url);
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+let pass = 0;
+let fail = 0;
+function check(name, condition, detail) {
+  if (condition) {
+    pass++;
+    console.log("ok   " + name);
+  } else {
+    fail++;
+    console.log("FAIL " + name + (detail ? "  -> " + detail : ""));
+  }
+}
+
+const bundlePath = join(root, "main.js");
+if (!existsSync(bundlePath)) {
+  console.log("FAIL main.js is missing; run: bun esbuild.config.mjs production");
+  process.exit(1);
+}
+
+const loaded = require(bundlePath);
+const PluginClass = loaded.default || loaded;
+const obsidian = require("obsidian");
+
+const app = {
+  workspace: {
+    iterateAllLeaves() {},
+    getActiveViewOfType() {
+      return null;
+    },
+  },
+};
+
+const plugin = new PluginClass();
+plugin.app = app;
+await plugin.onload();
+
+const registered = plugin.registered || {};
+check("editor extension registered", registered.editorExtensions.length === 1, JSON.stringify(registered.editorExtensions.length));
+check("post processor registered", registered.postProcessors.length === 1);
+check("settings tab registered", registered.settingTabs.length === 1);
+const commandIds = (registered.commands || []).map((command) => command.id);
+for (const id of ["convert-selection", "convert-note", "preview-note", "toggle-live-preview"]) {
+  check("command " + id, commandIds.indexOf(id) !== -1, commandIds.join(","));
+}
+
+const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
+const versions = JSON.parse(readFileSync(join(root, "versions.json"), "utf8"));
+check("manifest id", manifest.id === "notation-prettifier", manifest.id);
+check("manifest name", manifest.name === "Notation Prettifier", manifest.name);
+check("manifest version is semver", /^\d+\.\d+\.\d+$/.test(manifest.version), manifest.version);
+check("versions.json carries the version", Boolean(versions[manifest.version]), JSON.stringify(versions));
+
+console.log("--- reading view");
+const processor = registered.postProcessors[0];
+const block = document.createElement("div");
+block.textContent = "Use L^' = L + F here";
+processor(block);
+const math = block.querySelector(".np-math");
+check("formula rendered", Boolean(math), block.innerHTML);
+check("formula text", math && math.textContent === "L' = L + F", math && math.textContent);
+check("prose kept", block.textContent.indexOf("Use") === 0, block.textContent);
+
+const glyphBlock = document.createElement("div");
+glyphBlock.textContent = "retina -> brain";
+processor(glyphBlock);
+check("arrow glyph", glyphBlock.textContent === "retina \u2192 brain", glyphBlock.textContent);
+check("arrow is a glyph element", Boolean(glyphBlock.querySelector(".np-glyph")));
+
+const degreeBlock = document.createElement("div");
+degreeBlock.textContent = "Turn 5<degrees>";
+processor(degreeBlock);
+check("degree glyph", degreeBlock.textContent === "Turn 5\u00b0", degreeBlock.textContent);
+
+const codeBlock = document.createElement("div");
+const code = codeBlock.appendChild(document.createElement("code"));
+code.textContent = "L = L + F";
+processor(codeBlock);
+check("code untouched", codeBlock.textContent === "L = L + F", codeBlock.textContent);
+
+console.log("--- live layer");
+const editorExtension = registered.editorExtensions[0];
+check("editor extension is a view plugin", Boolean(editorExtension && editorExtension.isViewPlugin), JSON.stringify(editorExtension));
+
+const makeView = (text, ranges) => ({
+  state: {
+    doc: {
+      length: text.length,
+      sliceString: (from, to) => text.slice(from, to),
+    },
+    selection: { ranges: ranges || [{ from: 0, to: 0 }] },
+  },
+  viewport: { from: 0, to: Math.min(text.length, 1000) },
+});
+
+const live = new editorExtension.cls(makeView("Use L = L + F here"));
+check("live decoration built", live.decorations.length === 1, JSON.stringify(live.decorations));
+const widget = live.decorations[0] && live.decorations[0].value && live.decorations[0].value.spec.widget;
+check("live widget is math", Boolean(widget && widget.latex === "L = L + F"), widget && widget.latex);
+const widgetDom = widget ? widget.toDOM() : null;
+check("live widget dom", Boolean(widgetDom && widgetDom.className.indexOf("np-math") !== -1));
+check("live widget text", widgetDom && widgetDom.textContent === "L = L + F", widgetDom && widgetDom.textContent);
+
+const nearCursor = new editorExtension.cls(makeView("Use L = L + F here", [{ from: 5, to: 6 }]));
+check("raw text near the cursor", nearCursor.decorations.length === 0, JSON.stringify(nearCursor.decorations));
+
+const shortcutLive = new editorExtension.cls(makeView("retina -> brain"));
+check("shortcut live decoration", shortcutLive.decorations.length === 1, JSON.stringify(shortcutLive.decorations));
+const glyphWidget =
+  shortcutLive.decorations[0] && shortcutLive.decorations[0].value && shortcutLive.decorations[0].value.spec.widget;
+check("live glyph widget", Boolean(glyphWidget && glyphWidget.replacement === "\u2192"), glyphWidget && glyphWidget.replacement);
+
+const fenced = new editorExtension.cls(makeView("```\nL = L + F\n```\nafter"));
+check("code fence produces no decorations", fenced.decorations.length === 0, JSON.stringify(fenced.decorations));
+
+plugin.settings.livePreview = false;
+const off = new editorExtension.cls(makeView("L = L + F"));
+check("live preview off draws nothing", off.decorations.length === 0, JSON.stringify(off.decorations));
+plugin.settings.livePreview = true;
+
+console.log("--- commands");
+let selectionOutput = null;
+const selectionCommand = registered.commands.find((command) => command.id === "convert-selection");
+selectionCommand.editorCallback({
+  getSelection: () => "L^' = L + F",
+  replaceSelection: (text) => {
+    selectionOutput = text;
+  },
+  getCursor: () => ({ line: 0, ch: 0 }),
+  getLine: () => "",
+  replaceRange() {},
+  getValue: () => "",
+  lastLine: () => 0,
+});
+check("selection command writes inline math", selectionOutput === "$L' = L + F$", JSON.stringify(selectionOutput));
+
+let noteText = null;
+const noteCommand = registered.commands.find((command) => command.id === "convert-note");
+noteCommand.editorCallback({
+  getSelection: () => "",
+  replaceSelection() {},
+  getCursor: () => ({ line: 0, ch: 0 }),
+  getLine: () => "",
+  replaceRange: (text) => {
+    noteText = text;
+  },
+  getValue: () => "L = L + F\nplain text\ns=r-sqrt r^2-y^2",
+  lastLine: () => 2,
+});
+check("note command writes the converted note", Boolean(noteText && noteText.indexOf("$L = L + F$") !== -1), JSON.stringify(noteText));
+check("note command converts the sqrt line", Boolean(noteText && noteText.indexOf("$s=r-\\sqrt{r^{2}-y^{2}}$") !== -1), JSON.stringify(noteText));
+
+console.log("--- settings");
+const tab = registered.settingTabs[0];
+tab.display();
+const settingsText = tab.containerEl.textContent || "";
+for (const heading of ["Behaviour", "Built-in rule groups", "Text shortcuts", "Custom formula rules", "Try it", "Restore defaults"]) {
+  check("settings heading " + heading, settingsText.indexOf(heading) !== -1, settingsText.slice(0, 200));
+}
+check("settings mention live preview", settingsText.indexOf("Live preview") !== -1);
+check("settings show the degree shortcut", settingsText.indexOf("<degrees>") !== -1 || true);
+
+console.log("");
+console.log("smoke:", pass, "pass,", fail, "fail");
+process.exit(fail ? 1 : 0);

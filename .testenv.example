@@ -1,0 +1,24 @@
+# Local test configuration for Notation Prettifier.
+#
+# The corpus run reads real notes through this file, so no personal path or
+# document name is ever committed. Copy it to .testenv and fill in your own
+# values:
+#
+#   cp .testenv.example .testenv
+#
+# .testenv is gitignored and never leaves your machine. A key that is left
+# blank means its checks are skipped with a notice; a key that is set but
+# points at nothing stops the run, so a typo is noticed instead of ignored.
+
+# A folder of real notes to run the corpus checks against. The run bakes every
+# .md file in it, checks idempotency, delimiter and brace balance, and renders
+# a sample through the reading view. It never writes to the folder.
+NP_TEST_FOLDER=
+
+# Extra privacy patterns for test/privacy.mjs: a comma separated list of
+# regular expressions that must never appear in a tracked file. Put your own
+# vault names, course codes or document prefixes here, for example:
+#
+#   NP_PRIVACY_PATTERNS=my-vault,PSY\d{4},[A-Z]{3}_\d+
+#
+NP_PRIVACY_PATTERNS=
