@@ -86,7 +86,7 @@ All three conversion commands go through Obsidian's normal undo, so a single `Ct
 
 There are three layers, and the first two never modify your text.
 
-1. **Live Preview** draws a widget over a span of rough notation while the cursor is elsewhere. Move the cursor into the span and the raw text returns, exactly like Symbols Prettifier. The document is untouched.
+1. **Live Preview** draws a widget over a span of rough notation while the cursor is elsewhere. The moment you stop typing, the cursor sits at the end of the span and the math appears; move the cursor inside the span and the raw text returns for editing, exactly like Symbols Prettifier. The document is untouched.
 2. **Reading view** walks each rendered block and replaces the matching text nodes in place, from the last match to the first, so bold, links, list markers and table cells around a formula are not disturbed. Code blocks, inline code and existing MathJax are skipped.
 3. **Bake commands** run the same engine and write the converted text back: `L^' = L + F` becomes `$L' = L + F$` in the source. Baked output is ordinary Obsidian math, so it renders with or without this plugin, exports to PDF, and survives a copy to another app.
 

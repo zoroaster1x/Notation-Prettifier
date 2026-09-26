@@ -171,7 +171,9 @@ function createViewPlugin(plugin) {
         items.sort((a, b) => a.from - b.from || a.to - b.to);
 
         const ranges = view.state.selection.ranges;
-        const nearSelection = (a, b) => ranges.some((range) => range.from <= b && range.to >= a);
+        // A cursor at either edge of a span still draws it. Only a cursor
+        // strictly inside shows the raw text, which is the editing state.
+        const nearSelection = (a, b) => ranges.some((range) => range.from < b && range.to > a);
         const builder = []; // RangeSetBuilder is not needed: replace decorations are sorted
         for (const item of items) {
           if (nearSelection(item.from, item.to)) continue;

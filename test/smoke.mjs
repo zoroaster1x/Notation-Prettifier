@@ -118,7 +118,13 @@ check("live widget dom", Boolean(widgetDom && widgetDom.className.indexOf("np-ma
 check("live widget text", widgetDom && widgetDom.textContent === "L = L + F", widgetDom && widgetDom.textContent);
 
 const nearCursor = new editorExtension.cls(makeView("Use L = L + F here", [{ from: 5, to: 6 }]));
-check("raw text near the cursor", nearCursor.decorations.length === 0, JSON.stringify(nearCursor.decorations));
+check("raw text inside the span", nearCursor.decorations.length === 0, JSON.stringify(nearCursor.decorations));
+
+const afterSpan = new editorExtension.cls(makeView("Use L = L + F here", [{ from: 13, to: 13 }]));
+check("cursor at the span end still renders", afterSpan.decorations.length === 1, JSON.stringify(afterSpan.decorations));
+
+const beforeSpan = new editorExtension.cls(makeView("Use L = L + F here", [{ from: 4, to: 4 }]));
+check("cursor at the span start still renders", beforeSpan.decorations.length === 1, JSON.stringify(beforeSpan.decorations));
 
 const shortcutLive = new editorExtension.cls(makeView("retina -> brain"));
 check("shortcut live decoration", shortcutLive.decorations.length === 1, JSON.stringify(shortcutLive.decorations));
