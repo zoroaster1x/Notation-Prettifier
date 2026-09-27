@@ -95,6 +95,8 @@ processor(block);
 const math = block.querySelector(".np-math");
 check("formula rendered", Boolean(math), block.innerHTML);
 check("formula text", math && math.textContent === "L' = L + F", math && math.textContent);
+check("formula carries the math classes", Boolean(math && math.className.indexOf("math math-inline") !== -1), math && math.className);
+check("formula is marked loaded", Boolean(math && math.className.indexOf("is-loaded") !== -1), math && math.className);
 check("prose kept", block.textContent.indexOf("Use") === 0, block.textContent);
 
 const glyphBlock = document.createElement("div");

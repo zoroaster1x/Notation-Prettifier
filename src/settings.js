@@ -84,9 +84,13 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("np-settings");
-    new Setting(containerEl)
-      .setName("Notation Prettifier " + (this.plugin.manifest ? this.plugin.manifest.version : ""))
-      .setHeading();
+    containerEl.createEl("h2", { text: "Notation Prettifier" });
+    containerEl.createEl("p", {
+      cls: "np-intro",
+      text:
+        "Version " + (this.plugin.manifest ? this.plugin.manifest.version : "") +
+        ". Renders rough notation as LaTeX in Live Preview and Reading view, and bakes it into the note on command. Everything runs offline.",
+    });
 
     this.renderBehaviour(containerEl);
     this.renderGroups(containerEl);
@@ -98,7 +102,7 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
   }
 
   renderBehaviour(containerEl) {
-    new Setting(containerEl).setName("Behaviour").setHeading();
+    containerEl.createEl("h3", { text: "Behaviour" });
     for (const item of BEHAVIOUR) {
       new Setting(containerEl)
         .setName(item.name)
@@ -113,7 +117,7 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
   }
 
   renderGroups(containerEl) {
-    new Setting(containerEl).setName("Built-in rule groups").setHeading();
+    containerEl.createEl("h3", { text: "Built-in rule groups" });
     const groups = [
       {
         id: "shortcuts",
@@ -141,8 +145,9 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
   }
 
   renderShortcuts(containerEl) {
-    new Setting(containerEl).setName("Text shortcuts").setHeading();
+    containerEl.createEl("h3", { text: "Text shortcuts" });
     const setting = new Setting(containerEl)
+      .setClass("np-setting-stacked")
       .setName("Shortcut list")
       .setDesc("One per line: literal => replacement. The literal is plain text, not a regular expression. Changes apply as you type.");
     const hint = containerEl.createDiv({ cls: "np-hint" });
@@ -177,8 +182,9 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
   }
 
   renderCustomRules(containerEl) {
-    new Setting(containerEl).setName("Custom formula rules").setHeading();
+    containerEl.createEl("h3", { text: "Custom formula rules" });
     const setting = new Setting(containerEl)
+      .setClass("np-setting-stacked")
       .setName("Rule list")
       .setDesc(
         "One per line: regular expression => replacement ($1 refers to the first group). These run after the built-in groups, inside formulas only. Write \\\\ for a literal backslash, for example L\\\\^' => L'."
@@ -213,11 +219,14 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
   }
 
   renderTryIt(containerEl) {
-    new Setting(containerEl).setName("Try it").setHeading();
+    containerEl.createEl("h3", { text: "Try it" });
     const setting = new Setting(containerEl)
+      .setClass("np-setting-stacked")
       .setName("Sample")
       .setDesc("Type rough notation and see what the plugin renders and what the bake command would write.");
+    containerEl.createEl("div", { cls: "np-try-label", text: "Baked source" });
     const source = containerEl.createEl("pre", { cls: "np-try-source" });
+    containerEl.createEl("div", { cls: "np-try-label", text: "Rendered" });
     const preview = containerEl.createDiv({ cls: "np-try-preview" });
 
     const update = (value) => {
@@ -243,8 +252,9 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
   }
 
   renderReference(containerEl) {
+    containerEl.createEl("h3", { text: "Built-in rule reference" });
     const wrapper = containerEl.createEl("details", { cls: "np-reference" });
-    wrapper.createEl("summary", { text: "Built-in rule reference" });
+    wrapper.createEl("summary", { text: "Every pattern that ships with the plugin" });
     wrapper.createEl("p", {
       cls: "np-reference-note",
       text: "These are the patterns that ship with the plugin. A custom rule can reuse or override any of them.",

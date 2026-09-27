@@ -48,7 +48,7 @@ function shouldSkip(element) {
 
 function makeMathElement(raw, latex) {
   const host = document.createElement("span");
-  host.className = "np-math";
+  host.className = "np-math math math-inline";
   renderMathInto(host, raw, latex);
   return host;
 }

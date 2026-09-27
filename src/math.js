@@ -132,11 +132,15 @@ export function renderMathInto(host, raw, latex, attempt = 0, onLayout) {
   if (rendered) {
     while (host.firstChild) host.removeChild(host.firstChild);
     host.appendChild(rendered);
+    // Obsidian marks its own math is-loaded once typeset; themes hang fade-in
+    // and sizing on that class.
+    if (host.classList) host.classList.add("is-loaded");
     if (onLayout) onLayout();
     verifyVisible(host, raw, latex, attempt, onLayout);
     return true;
   }
   host.textContent = raw;
+  if (host.classList) host.classList.remove("is-loaded");
   if (onLayout) onLayout();
   if (attempt < 40) {
     setTimeout(() => {

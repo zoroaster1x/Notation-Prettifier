@@ -55,7 +55,7 @@ class MathWidget extends WidgetType {
 
   toDOM(view) {
     const host = document.createElement("span");
-    host.className = "np-math";
+    host.className = "np-math math math-inline";
     const layout = () => {
       if (view && typeof view.requestMeasure === "function") view.requestMeasure();
     };
