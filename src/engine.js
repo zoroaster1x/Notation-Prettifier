@@ -500,11 +500,24 @@ function tokenize(text, from, to, mathWords, shortcutToken) {
     tokens.push(token("term", match.value, i, match.to));
     i = match.to;
   }
+  // Whitespace is skipped, so a gap between tokens is the record that one was
+  // separated from the previous one.
+  for (let k = 0; k < tokens.length; k++) {
+    tokens[k].spaceBefore = k > 0 && tokens[k].from > tokens[k - 1].to;
+  }
   return tokens;
 }
 
 function isMathToken(t) {
   return OPERAND_TYPES.has(t.type) || t.type === "op";
+}
+
+// A token that continues an expression rather than a fresh word: after an
+// operator, an opening bracket, a command or a function name, a spaced letter
+// belongs to the formula (L = L + F, cos θ, sqrt x).
+function expressionBefore(t) {
+  if (!t) return false;
+  return t.type === "op" || t.type === "open" || t.type === "command" || t.type === "mathword";
 }
 
 // A token that can carry a subscript or a superscript: a single letter, a
@@ -578,6 +591,7 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
   let end = -1;
   let operands = [];
   let equals = [];
+  let scripts = [];
   let arrows = [];
   let compares = [];
   let commands = [];
@@ -589,7 +603,7 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
       const inSpan = (index) => index >= start && index <= last;
       const operandBefore = (index) => operands.some((o) => o >= start && o < index);
       const operandAfter = (index) => operands.some((o) => o > index && o <= last);
-      const hasEquals = equals.some(inSpan) || commands.some(inSpan);
+      const hasEquals = equals.some(inSpan) || commands.some(inSpan) || scripts.some(inSpan);
       const hasArrow = arrows.some((index) => inSpan(index) && operandBefore(index) && operandAfter(index));
       const hasCompare = compares.some((index) => inSpan(index) && operandBefore(index) && operandAfter(index));
       if (operands.length > 0 && (hasEquals || hasArrow || hasCompare) && tokens[last].to > tokens[start].from) {
@@ -600,6 +614,7 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
     end = -1;
     operands = [];
     equals = [];
+    scripts = [];
     arrows = [];
     compares = [];
     commands = [];
@@ -614,10 +629,15 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
     const hasRelation = equals.length + arrows.length + compares.length + commands.length > 0;
 
     if (t.type === "letter" || t.type === "number" || t.type === "unit" || t.type === "mathword") {
+      // A single letter after a space is prose unless it is part of an
+      // expression already: n^2 x ends the formula, L = L + F keeps its F,
+      // cos θ keeps its θ. Without this, a letter typed after a formula is
+      // welded into the math while a two letter word breaks it.
+      if (t.spaceBefore && start >= 0 && !hasRelation && !expressionBefore(prev)) flush();
       if (start < 0) start = k;
       end = k;
       operands.push(k);
-      if (afterScript && symbolBase) qualifyScript(arrows, compares, equals, k);
+      if (afterScript && symbolBase) qualifyScript(scripts, k);
     } else if (t.type === "command") {
       if (start < 0) start = k;
       end = k;
@@ -632,7 +652,7 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
       if (start < 0) start = k - 1;
       end = k;
       operands.push(k);
-      if (scriptBase) qualifyScript(arrows, compares, equals, k);
+      if (scriptBase) qualifyScript(scripts, k);
     } else if (t.type === "word") {
       if (afterScript) {
         const simple = /^[A-Za-z]{1,6}$/.test(t.value);
@@ -642,7 +662,7 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
           if (start < 0) start = k - 2;
           end = k;
           operands.push(k);
-          if (symbolBase) qualifyScript(arrows, compares, equals, k);
+          if (symbolBase) qualifyScript(scripts, k);
         } else {
           flush();
         }
@@ -687,7 +707,7 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
           if (start < 0) start = k - 2;
           end = k;
           operands.push(k);
-          qualifyScript(arrows, compares, equals, k);
+          qualifyScript(scripts, k);
         } else {
           flush();
         }
@@ -709,7 +729,7 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
           if (start < 0) start = k - 1;
           end = k;
           operands.push(k);
-          qualifyScript(arrows, compares, equals, k);
+          qualifyScript(scripts, k);
         } else if (start >= 0 && hasRelation) {
           end = k;
           operands.push(k);
@@ -725,7 +745,7 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
         if (start < 0) start = k;
         end = close;
         operands.push(close);
-        if (scriptGroup && symbolBase) qualifyScript(arrows, compares, equals, close);
+        if (scriptGroup && symbolBase) qualifyScript(scripts, close);
         k = close;
       } else {
         flush();
@@ -738,10 +758,11 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
   flush();
 }
 
-// A script on a symbol base makes the span a formula. The kind of relation it
-// counts as is the caller's: a script is as good as an equals sign here.
-function qualifyScript(arrows, compares, equals, index) {
-  equals.push(index);
+// A script on a symbol base makes the span a formula, but it is not a
+// relation: a formula qualified only by n^2 still ends at a space, while
+// L = L + F may hold a spaced operand.
+function qualifyScript(scripts, index) {
+  scripts.push(index);
 }
 
 export function detectSpans(text, options = {}) {

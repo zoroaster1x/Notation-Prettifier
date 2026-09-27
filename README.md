@@ -403,6 +403,7 @@ These are honest gaps, not bugs waiting to be reported.
 - **A display formula must be alone on its line.** Anything before or after it keeps the inline form.
 - **Multi-letter subscripts follow the source.** `F_LM` becomes `F_{LM}`, and `F_LMx(` is read as `F_{LM}\times(`.
 - **Shortcuts are literal and global.** Choose distinctive literals; a `<` or a single letter would be a bad shortcut. An angle-bracket shortcut at the start of a line can be read as an HTML tag by Markdown and swallow the lines below, which is why the plugin rewrites those shortcuts as you type by default, and why the square bracket degree forms exist.
+- **A spaced single letter ends a script qualified formula.** `n^2 x` renders `$n^{2}$ x`, because a lone letter after a space is prose. A relation keeps its spaced operands: `L = L + F`, `cos θ = 0.5` and `F = 2.50 D` all stay one formula. Without the space the letter joins: `n^2x` renders `$n^{2}x$`.
 - **A formula is drawn only when the cursor is not strictly inside it.** A cursor at either edge still draws it, so a freshly typed formula renders without moving the cursor; place the cursor inside the span to edit the raw text.
 - **Obsidian loads MathJax lazily, and its CHTML output needs a stylesheet.** The plugin asks for the engine at startup, renders a tiny formula through Obsidian's own renderer so the app attaches the MathJax CHTML stylesheet, attaches it directly if the app has not, and retries a formula render until it produces real content. A formula never stays raw or invisible because the math engine was not ready.
 - **Other decoration plugins can overlap.** Disable Symbols Prettifier; other math or decoration plugins may also draw over the same range.
@@ -440,7 +441,7 @@ The synthetic suites need nothing but the repository:
 
 ```bash
 bun esbuild.config.mjs production   # build main.js
-bun test/convert.mjs                # the conversion engine, 71 checks
+bun test/convert.mjs                # the conversion engine, 77 checks
 bun test/editor.mjs                 # the live window scanner, 13 checks
 bun test/examples.mjs               # the documented examples in this README, 44 checks
 bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 57 checks
@@ -467,10 +468,10 @@ Last run on a library of 225 old optometry notes (23,860 lines):
 | Check | Result |
 |---|---|
 | Corpus over 225 notes, read only | 0 failures, about 0.3 s |
-| Formulas wrapped | 606, across 46 files; 179 files needed no change |
+| Formulas wrapped | 607, across 46 files; 179 files needed no change |
 | Protected regions preserved | 3,317 of 3,317 |
 | Converted lines rendered through the Reading view | 300 lines, 375 inline elements, no empty formula |
-| Engine checks (`test/convert.mjs`) | 71 pass, 0 fail |
+| Engine checks (`test/convert.mjs`) | 77 pass, 0 fail |
 | Live window scanner (`test/editor.mjs`) | 13 pass, 0 fail |
 | Documented examples (`test/examples.mjs`) | 44 pass, 0 fail |
 | Bundle checks (`test/smoke.mjs`) | 57 pass, 0 fail |

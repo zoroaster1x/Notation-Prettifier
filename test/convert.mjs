@@ -162,6 +162,14 @@ eq(
   "$(20^{2}\\times-8.5)/(2000(1.5-1))=-3.4\\,\\text{mm}$"
 );
 
+console.log("--- spaces end a script formula");
+eq("space ends a script formula", bake("n^(-3) l").text, "$n^{-3}$ l");
+eq("no space joins the letter", bake("n^(-3)l").text, "$n^{-3}l$");
+eq("two spaces end it too", bake("n^2  x").text, "$n^{2}$  x");
+eq("a relation keeps spaced operands", bake("L = L + F").text, "$L = L + F$");
+eq("a function keeps a spaced argument", bake("cos \u03b8 = 0.5").text, "$\\cos \u03b8 = 0.5$");
+eq("a unit keeps its space", bake("F = 2.50 D").text, "$F = 2.50\\,\\text{D}$");
+
 console.log("--- things that must stay plain");
 eq("possessive after a number", bake("Y2's bay this week").text, "Y2's bay this week");
 eq("possessive after a digit", bake("the 2's column").text, "the 2's column");
