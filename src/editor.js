@@ -29,6 +29,7 @@
 // of a full document pass.
 
 import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
+import { editorLivePreviewField } from "obsidian";
 import { renderMathInto } from "./math.js";
 import {
   detectShortcutMatches,
@@ -158,6 +159,15 @@ function createViewPlugin(plugin) {
       build(view, update) {
         this.configVersion = plugin.configVersion();
         if (!plugin.settings.livePreview) return Decoration.none;
+        // Source mode shows the raw markdown by definition; a widget there is
+        // in the way of editing, so nothing is drawn.
+        if (editorLivePreviewField) {
+          try {
+            if (view.state.field(editorLivePreviewField) === false) return Decoration.none;
+          } catch (error) {
+            // A state without the field, such as the test stub.
+          }
+        }
         const doc = view.state.doc;
         const viewport = view.viewport;
         const from = Math.max(0, viewport.from - WINDOW_BACK);

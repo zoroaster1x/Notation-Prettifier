@@ -134,13 +134,14 @@ const inputHandler = Array.isArray(editorExtensions)
 check("editor extension is a view plugin", Boolean(editorExtension && editorExtension.isViewPlugin), JSON.stringify(editorExtension));
 check("eager shortcut input handler registered", Boolean(inputHandler), JSON.stringify(editorExtensions));
 
-const makeView = (text, ranges) => ({
+const makeView = (text, ranges, livePreview = true) => ({
   state: {
     doc: {
       length: text.length,
       sliceString: (from, to) => text.slice(from, to),
     },
     selection: { ranges: ranges || [{ from: 0, to: 0 }] },
+    field: () => livePreview,
   },
   viewport: { from: 0, to: Math.min(text.length, 1000) },
 });
@@ -195,6 +196,9 @@ plugin.settings.eagerShortcuts = true;
 
 const fenced = new editorExtension.cls(makeView("```\nL = L + F\n```\nafter"));
 check("code fence produces no decorations", fenced.decorations.length === 0, JSON.stringify(fenced.decorations));
+
+const sourceMode = new editorExtension.cls(makeView("Use L = L + F here", undefined, false));
+check("source mode draws nothing", sourceMode.decorations.length === 0, JSON.stringify(sourceMode.decorations));
 
 plugin.settings.livePreview = false;
 const off = new editorExtension.cls(makeView("L = L + F"));
