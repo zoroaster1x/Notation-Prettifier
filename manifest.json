@@ -1,7 +1,7 @@
 {
   "id": "notation-prettifier",
   "name": "Notation Prettifier",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "minAppVersion": "1.5.0",
   "description": "Renders rough notation (L^', n^(i), i_1^', sqrt r^2-y^2, x as times, <degrees>) as LaTeX math or symbols in the editor and reading view, and bakes the LaTeX into the note. Rules run offline.",
   "author": "Zoroaster1x",

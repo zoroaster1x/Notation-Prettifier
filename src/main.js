@@ -98,6 +98,7 @@ export default class NotationPrettifierPlugin extends Plugin {
     this._cache = null;
     this._configVersion = 0;
     await this.loadSettings();
+    this.applyMathScale();
     ensureMathJax().then(() => this.warmUpMath());
     this.registerEditorExtension(createEditorExtension(this));
     this.registerMarkdownPostProcessor(readingProcessor(this));
@@ -144,8 +145,28 @@ export default class NotationPrettifierPlugin extends Plugin {
   async saveSettings() {
     this._cache = null;
     this._configVersion++;
+    this.applyMathScale();
     await this.saveData(this.settings);
     refreshEditors(this.app);
+  }
+
+  // MathJax draws its letters narrower than the interface font, so the reader
+  // can scale this plugin's formulas without touching Obsidian's own math.
+  applyMathScale() {
+    const scale = Number(this.settings.mathScale) || 100;
+    try {
+      document.body.style.setProperty("--np-math-scale", String(scale / 100));
+    } catch (error) {
+      // A document without a body is not a place this plugin runs.
+    }
+  }
+
+  onunload() {
+    try {
+      document.body.style.removeProperty("--np-math-scale");
+    } catch (error) {
+      // Nothing to clean up.
+    }
   }
 
   configVersion() {

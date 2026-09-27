@@ -365,6 +365,7 @@ Everything lives under **Settings → Notation Prettifier**.
 | Section | Setting | Default | What it does |
 |---|---|---|---|
 | Behaviour | Live preview | on | Render notation as math while you type. The note text is not changed; the cursor inside a range shows the raw text again. |
+| | Math size | 115% | Scale the rendered formulas against the surrounding text. MathJax's letters are narrower than the interface font, so 110 to 125% often reads better. 100% matches Obsidian's own math. |
 | | Reading view | on | Render notation as math in Reading view and in exported HTML. |
 | | Rewrite angle bracket shortcuts as you type | on | Typing `<deg>` writes the degree sign into the note immediately, so Markdown never sees a tag and cannot swallow the lines below. Turn it off to leave the source untouched; the `[deg]` forms are always safe. |
 | | Display math for a line that is one formula | on | When baking, a line whose whole content is one formula becomes `$$...$$` instead of `$...$`. Applies to the note and line commands, not to a selection. |

@@ -263,7 +263,7 @@ console.log("--- settings");
 const tab = registered.settingTabs[0];
 tab.display();
 const settingsText = tab.containerEl.textContent || "";
-for (const heading of ["Behaviour", "Built-in rule groups", "Text shortcuts", "Custom formula rules", "Try it", "Restore defaults"]) {
+for (const heading of ["Behaviour", "Math size", "Built-in rule groups", "Text shortcuts", "Custom formula rules", "Try it", "Restore defaults"]) {
   check("settings heading " + heading, settingsText.indexOf(heading) !== -1, settingsText.slice(0, 200));
 }
 check("settings mention live preview", settingsText.indexOf("Live preview") !== -1);

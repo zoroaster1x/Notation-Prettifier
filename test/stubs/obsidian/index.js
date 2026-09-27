@@ -109,6 +109,11 @@ class Setting {
     callback(component);
     return this;
   }
+  addSlider(callback) {
+    const component = new SliderComponent(this.settingEl);
+    callback(component);
+    return this;
+  }
   addDropdown(callback) {
     const component = new DropdownComponent(this.settingEl);
     callback(component);
@@ -177,6 +182,31 @@ class TextComponent extends BaseComponent {
 }
 
 class TextAreaComponent extends TextComponent {}
+
+class SliderComponent extends BaseComponent {
+  constructor(parent) {
+    super();
+    this.sliderEl = el("input");
+    this.sliderEl.type = "range";
+    parent.appendChild(this.sliderEl);
+    this.value = 0;
+  }
+  setLimits() {
+    return this;
+  }
+  setValue(value) {
+    this.value = value;
+    this.sliderEl.value = String(value);
+    return this;
+  }
+  setDynamicTooltip() {
+    return this;
+  }
+  onChange(callback) {
+    this.change = callback;
+    return this;
+  }
+}
 
 class DropdownComponent extends BaseComponent {
   constructor(parent) {
@@ -291,6 +321,7 @@ module.exports = {
   ToggleComponent,
   TextComponent,
   TextAreaComponent,
+  SliderComponent,
   DropdownComponent,
   ButtonComponent,
   renderMath,

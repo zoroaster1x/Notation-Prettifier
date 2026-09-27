@@ -35,6 +35,7 @@ export const DEFAULT_SETTINGS = {
   readingView: true,
   eagerShortcuts: true,
   displayFormulaLines: true,
+  mathScale: 115,
   groups: {
     shortcuts: true,
     scripts: true,
@@ -114,6 +115,21 @@ export class NotationPrettifierSettingTab extends PluginSettingTab {
           })
         );
     }
+    new Setting(containerEl)
+      .setName("Math size")
+      .setDesc(
+        "Scale the rendered formulas against the surrounding text. MathJax's letters are narrower than the interface font, so 110 to 125% often reads better. 100% matches Obsidian's own math."
+      )
+      .addSlider((slider) =>
+        slider
+          .setLimits(80, 160, 5)
+          .setValue(Number(this.plugin.settings.mathScale) || 100)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.mathScale = value;
+            await this.plugin.saveSettings();
+          })
+      );
   }
 
   renderGroups(containerEl) {

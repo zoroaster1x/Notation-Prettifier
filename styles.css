@@ -4,9 +4,12 @@
 }
 
 /* MathJax gives its container a margin; a class selector outranks it without
-   !important, and avoids the unknown mjx-container type selector. */
+   !important, and avoids the unknown mjx-container type selector. The font
+   size carries the Math size setting, applied by the plugin as
+   --np-math-scale on the body. */
 .np-math .MathJax {
   margin: 0;
+  font-size: calc(1em * var(--np-math-scale, 1));
 }
 
 /* Settings */
