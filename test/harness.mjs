@@ -15,6 +15,11 @@ export function setupDom() {
   globalThis.CSSStyleDeclaration = window.CSSStyleDeclaration;
   patchElement(window);
   patchText(window);
+  // Stand in for the MathJax CHTML stylesheet, which the plugin requires
+  // before it accepts a rendered formula.
+  const style = document.createElement("style");
+  style.textContent = "mjx-c::before{content:'x'}";
+  document.head.appendChild(style);
   return { window, document };
 }
 

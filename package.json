@@ -1,6 +1,6 @@
 {
   "name": "notation-prettifier",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Renders rough notation (L^', n^(i), i_1^', sqrt, x as times, theta, <degrees>) as LaTeX math or symbols in the editor and reading view, and bakes the LaTeX into the note on command. Rules run offline.",
   "main": "main.js",
   "author": "Zoroaster1x",

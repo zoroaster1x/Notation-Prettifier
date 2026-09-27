@@ -332,7 +332,7 @@ export default class NotationPrettifierPlugin extends Plugin {
   // Rendering a tiny formula once through Obsidian's own renderer makes the app
   // attach the MathJax CHTML stylesheet, which is what makes the glyphs of
   // plugin-rendered math visible. The direct attach covers a vault that never
-  // rendered its own math.
+  // rendered its own math, and both are retried for a few seconds.
   warmUpMath() {
     try {
       const holder = document.createElement("div");
@@ -349,10 +349,32 @@ export default class NotationPrettifierPlugin extends Plugin {
     } catch (error) {
       // The direct stylesheet attach below still runs.
     }
-    setTimeout(() => {
-      attachMathStylesheet();
-      this.refreshPreviews();
-    }, 300);
+
+    const delays = [300, 1000, 2500, 5000];
+    delays.forEach((delay, index) => {
+      setTimeout(() => {
+        const ready = hasMathStylesheet() || attachMathStylesheet();
+        if (ready) {
+          if (!this._mathReadyNoticed) {
+            this._mathReadyNoticed = true;
+            this.refreshPreviews();
+          }
+          return;
+        }
+        if (index === delays.length - 1) {
+          new Notice(
+            "Notation Prettifier " + this.manifest.version +
+              ": the MathJax stylesheet is missing, so formulas stay as text. Run Check the current line for details.",
+            8000
+          );
+        }
+      }, delay);
+    });
+
+    new Notice(
+      "Notation Prettifier " + this.manifest.version + ": " + (hasMathStylesheet() ? "math ready" : "waiting for the math engine"),
+      3000
+    );
   }
 
   refreshPreviews() {

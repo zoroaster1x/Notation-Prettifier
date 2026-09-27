@@ -18,17 +18,18 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-// MathJax is loaded lazily by Obsidian, and the CHTML output draws its glyphs
-// through a stylesheet that Obsidian only attaches a moment after it renders
-// its own math. A plugin calling renderMath alone gets containers whose
-// characters are invisible. These helpers load the engine, attach the
-// stylesheet, and retry a render until it produces real content.
+// MathJax and its CHTML stylesheet.
+//
+// renderMath is MathJax.tex2chtml(source, { display }), and its glyphs come
+// from a stylesheet Obsidian attaches a moment after it renders its own math.
+// A plugin calling renderMath alone gets containers whose characters are
+// invisible, so nothing is drawn until the stylesheet is confirmed: the raw
+// text stays visible and a timer retries. Invisible math can never happen.
 
 import { loadMathJax, renderMath } from "obsidian";
 
 let loadedPromise = null;
-let stylesheet = null;
-let stylesheetChecked = false;
+let attachedStylesheet = null;
 
 export function ensureMathJax() {
   if (loadedPromise) return loadedPromise;
@@ -45,11 +46,20 @@ export function ensureMathJax() {
   return loadedPromise || Promise.resolve();
 }
 
+function mathJaxGlobal() {
+  if (typeof MathJax !== "undefined" && MathJax) return MathJax;
+  if (typeof window !== "undefined" && window.MathJax) return window.MathJax;
+  return null;
+}
+
+// The glyph rules are the marker. Obsidian's own CSS mentions mjx-container,
+// so that string is not enough to know the CHTML stylesheet is attached.
 export function hasMathStylesheet() {
-  if (stylesheet && stylesheet.isConnected) return true;
   try {
+    if (attachedStylesheet && attachedStylesheet.isConnected) return true;
     for (const style of Array.from(document.head.querySelectorAll("style"))) {
-      if ((style.textContent || "").indexOf("mjx-container") !== -1) return true;
+      const text = style.textContent || "";
+      if (text.indexOf("mjx-c") !== -1 || text.indexOf("MJX-TEX") !== -1) return true;
     }
   } catch (error) {
     // A document without a head is not a place this plugin runs.
@@ -57,17 +67,15 @@ export function hasMathStylesheet() {
   return false;
 }
 
-// Obsidian's own math renderer attaches MathJax.chtmlStylesheet() to the head
-// 100 ms after a render. Doing the same keeps plugin-rendered math visible
-// without waiting for the note to contain its own $...$ formula.
 export function attachMathStylesheet() {
   if (hasMathStylesheet()) return true;
   try {
-    if (typeof MathJax === "undefined" || typeof MathJax.chtmlStylesheet !== "function") return false;
-    const sheet = MathJax.chtmlStylesheet();
+    const mathJax = mathJaxGlobal();
+    if (!mathJax || typeof mathJax.chtmlStylesheet !== "function") return false;
+    const sheet = mathJax.chtmlStylesheet();
     if (!sheet) return false;
     if (!document.head.contains(sheet)) document.head.appendChild(sheet);
-    stylesheet = sheet;
+    attachedStylesheet = sheet;
     return true;
   } catch (error) {
     return false;
@@ -95,10 +103,9 @@ export function tryRenderMath(latex, display) {
       ensureMathJax();
       return null;
     }
-    if (!stylesheetChecked) {
-      stylesheetChecked = true;
-      attachMathStylesheet();
-    }
+    // A container without the glyph stylesheet draws nothing. Keep the raw
+    // text instead and retry once the stylesheet is attached.
+    if (!hasMathStylesheet() && !attachMathStylesheet()) return null;
     return element;
   } catch (error) {
     ensureMathJax();
@@ -106,8 +113,8 @@ export function tryRenderMath(latex, display) {
   }
 }
 
-// Fills host with the typeset formula. Until MathJax answers, the raw text
-// stays visible and a timer tries again, up to about ten seconds.
+// Fills host with the typeset formula. Until the engine and its stylesheet
+// answer, the raw text stays visible and a timer tries again.
 export function renderMathInto(host, raw, latex, attempt = 0) {
   const rendered = tryRenderMath(latex, false);
   if (rendered) {
@@ -116,11 +123,11 @@ export function renderMathInto(host, raw, latex, attempt = 0) {
     return true;
   }
   host.textContent = raw;
-  if (attempt < 12) {
+  if (attempt < 40) {
     setTimeout(() => {
       if (host.isConnected === false) return;
       renderMathInto(host, raw, latex, attempt + 1);
-    }, Math.min(2000, 120 * (attempt + 1)));
+    }, Math.min(2000, 100 + 80 * attempt));
   }
   return false;
 }
