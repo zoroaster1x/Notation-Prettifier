@@ -260,6 +260,10 @@ function renderMath(source, display) {
   return host;
 }
 
+async function loadMathJax() {
+  return undefined;
+}
+
 const editorLivePreviewField = { __livePreview: true };
 
 module.exports = {
@@ -277,6 +281,7 @@ module.exports = {
   DropdownComponent,
   ButtonComponent,
   renderMath,
+  loadMathJax,
   editorLivePreviewField,
 };
 module.exports.default = module.exports;
