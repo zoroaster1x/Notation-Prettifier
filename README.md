@@ -6,7 +6,7 @@ It also carries the whole arrow and sign map of **Symbols Prettifier** (`->` to 
 
 Everything runs offline. There is no API key, no model, no network request, and no telemetry. The rules are regular expressions you can read, test and extend in the settings tab without touching the source.
 
-**[What it does](#what-it-does)** · **[Install](#installing)** · **[Commands](#commands)** · **[Built-in rules](#built-in-rules)** · **[Text shortcuts](#text-shortcuts)** · **[Custom rules](#custom-formula-rules)** · **[Settings](#settings)** · **[Performance](#performance)** · **[Known limits](#known-limits)** · **[Tests](#testing)** · **[Funding](#funding)** · **[License](#license)**
+**[What it does](#what-it-does)** · **[Install](#installing)** · **[Commands](#commands)** · **[How it works](#how-it-works)** · **[Built-in rules](#built-in-rules)** · **[Text shortcuts](#text-shortcuts)** · **[Custom rules](#custom-formula-rules)** · **[Settings](#settings)** · **[Performance](#performance)** · **[Examples](#documented-examples)** · **[Known limits](#known-limits)** · **[Tests](#testing)** · **[Funding](#funding)** · **[License](#license)**
 
 ---
 
@@ -601,7 +601,7 @@ The settings tab shows the same list under **Built-in rule reference**. Patterns
 
 ---
 
-## Documented examples (pinned by `test/examples.mjs`)
+## Documented examples
 
 Every line below is checked by `bun test/examples.mjs` against the current engine.
 
