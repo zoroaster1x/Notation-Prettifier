@@ -3,8 +3,10 @@
   white-space: nowrap;
 }
 
-.np-math mjx-container {
-  margin: 0 !important;
+/* MathJax gives its container a margin; a class selector outranks it without
+   !important, and avoids the unknown mjx-container type selector. */
+.np-math .MathJax {
+  margin: 0;
 }
 
 .np-glyph {

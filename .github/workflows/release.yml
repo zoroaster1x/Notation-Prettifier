@@ -1,0 +1,71 @@
+# Builds the plugin on every release, proves where the assets came from, and
+# uploads them. The attestation is what lets a reader verify that main.js in the
+# release was built from this repository, which is the Obsidian review's
+# provenance recommendation.
+#
+#   - Publish a release, or run this workflow by hand with the tag name.
+#   - Only main.js, manifest.json and styles.css are uploaded. versions.json
+#     stays in the repository and is not a release asset.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build, attest and upload
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun esbuild.config.mjs production
+
+      - name: Engine tests
+        run: bun test/convert.mjs
+
+      - name: Live window tests
+        run: bun test/editor.mjs
+
+      - name: Documented examples
+        run: bun test/examples.mjs
+
+      - name: Bundle tests
+        run: bun test/smoke.mjs
+
+      - name: Privacy guard
+        run: bun test/privacy.mjs
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          gh release upload "$TAG" main.js manifest.json styles.css --clobber

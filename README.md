@@ -67,6 +67,12 @@ From a source checkout:
 
 builds the bundle and copies the files into place. It needs `bun` or `npm`; with neither, it copies an existing `main.js`.
 
+Release assets are built and attested by GitHub Actions on every release. To check the provenance of a downloaded `main.js`:
+
+```bash
+gh attestation verify main.js --repo zoroaster1x/Notation-Prettifier
+```
+
 ---
 
 ## Commands
