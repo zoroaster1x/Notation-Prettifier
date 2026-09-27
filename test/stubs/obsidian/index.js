@@ -264,6 +264,12 @@ async function loadMathJax() {
   return undefined;
 }
 
+const MarkdownRenderer = {
+  async render() {
+    return undefined;
+  },
+};
+
 const editorLivePreviewField = { __livePreview: true };
 
 module.exports = {
@@ -282,6 +288,7 @@ module.exports = {
   ButtonComponent,
   renderMath,
   loadMathJax,
+  MarkdownRenderer,
   editorLivePreviewField,
 };
 module.exports.default = module.exports;

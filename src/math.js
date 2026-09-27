@@ -18,14 +18,17 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-// MathJax is loaded lazily by Obsidian. renderMath throws or returns nothing
-// before that load finishes, which used to leave a formula as raw text for the
-// rest of the session. These helpers kick the load off and retry the render
-// until it succeeds, then swap the raw text for the typeset element.
+// MathJax is loaded lazily by Obsidian, and the CHTML output draws its glyphs
+// through a stylesheet that Obsidian only attaches a moment after it renders
+// its own math. A plugin calling renderMath alone gets containers whose
+// characters are invisible. These helpers load the engine, attach the
+// stylesheet, and retry a render until it produces real content.
 
 import { loadMathJax, renderMath } from "obsidian";
 
 let loadedPromise = null;
+let stylesheet = null;
+let stylesheetChecked = false;
 
 export function ensureMathJax() {
   if (loadedPromise) return loadedPromise;
@@ -42,13 +45,61 @@ export function ensureMathJax() {
   return loadedPromise || Promise.resolve();
 }
 
+export function hasMathStylesheet() {
+  if (stylesheet && stylesheet.isConnected) return true;
+  try {
+    for (const style of Array.from(document.head.querySelectorAll("style"))) {
+      if ((style.textContent || "").indexOf("mjx-container") !== -1) return true;
+    }
+  } catch (error) {
+    // A document without a head is not a place this plugin runs.
+  }
+  return false;
+}
+
+// Obsidian's own math renderer attaches MathJax.chtmlStylesheet() to the head
+// 100 ms after a render. Doing the same keeps plugin-rendered math visible
+// without waiting for the note to contain its own $...$ formula.
+export function attachMathStylesheet() {
+  if (hasMathStylesheet()) return true;
+  try {
+    if (typeof MathJax === "undefined" || typeof MathJax.chtmlStylesheet !== "function") return false;
+    const sheet = MathJax.chtmlStylesheet();
+    if (!sheet) return false;
+    if (!document.head.contains(sheet)) document.head.appendChild(sheet);
+    stylesheet = sheet;
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function looksRendered(element) {
+  if (!element) return false;
+  try {
+    if (element.querySelector && element.querySelector("mjx-math, .katex-html, svg")) return true;
+  } catch (error) {
+    // Fall through to the text check.
+  }
+  return Boolean((element.textContent || "").trim());
+}
+
 export function tryRenderMath(latex, display) {
   try {
     if (typeof renderMath !== "function") {
       ensureMathJax();
       return null;
     }
-    return renderMath(latex, display) || null;
+    const element = renderMath(latex, display);
+    if (!looksRendered(element)) {
+      ensureMathJax();
+      return null;
+    }
+    if (!stylesheetChecked) {
+      stylesheetChecked = true;
+      attachMathStylesheet();
+    }
+    return element;
   } catch (error) {
     ensureMathJax();
     return null;

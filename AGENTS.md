@@ -131,12 +131,15 @@ them as regressions to avoid.
   intersects the range, exactly like Symbols Prettifier. A cursor at either
   edge of a span still draws it, so a freshly typed formula renders without a
   click.
-* Obsidian exports `loadMathJax` beside `renderMath`, and `renderMath` throws or
-  returns nothing until the lazy MathJax load finishes. `src/math.js` asks for
-  the load at plugin start and retries a failed render with a timer, swapping
-  the raw text for the typeset element when it succeeds. Without that, every
-  formula stayed raw for the session while the glyph shortcuts kept working,
-  which looked exactly like detection being broken.
+* Obsidian exports `loadMathJax` beside `renderMath`, and `renderMath` is only
+  `MathJax.tex2chtml(source, { display })`. Its CHTML glyphs are drawn by a
+  stylesheet that Obsidian attaches through its own non-exported `dW()`, 100 ms
+  after it renders its own math. A plugin calling `renderMath` alone gets
+  containers whose characters are invisible, which looked exactly like the
+  decoration being empty. `src/math.js` asks for the engine at plugin start,
+  warms the app's own renderer with a tiny `$x$` so the stylesheet is attached,
+  attaches `MathJax.chtmlStylesheet()` directly when that has not happened, and
+  retries a render until the element holds real content.
 * An angle bracket shortcut such as `<deg>` is an HTML block to the Markdown
   parser, and a line that starts with one swallows the lines below into one raw
   HTML block. The editor input handler rewrites a completed `<deg>` to `°` in

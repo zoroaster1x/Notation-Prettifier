@@ -403,7 +403,7 @@ These are honest gaps, not bugs waiting to be reported.
 - **Multi-letter subscripts follow the source.** `F_LM` becomes `F_{LM}`, and `F_LMx(` is read as `F_{LM}\times(`.
 - **Shortcuts are literal and global.** Choose distinctive literals; a `<` or a single letter would be a bad shortcut. An angle-bracket shortcut at the start of a line can be read as an HTML tag by Markdown and swallow the lines below, which is why the plugin rewrites those shortcuts as you type by default, and why the square bracket degree forms exist.
 - **A formula is drawn only when the cursor is not strictly inside it.** A cursor at either edge still draws it, so a freshly typed formula renders without moving the cursor; place the cursor inside the span to edit the raw text.
-- **Obsidian loads MathJax lazily.** The plugin asks for it at startup and retries a formula render until it succeeds, so a formula never stays as raw text because the math engine was not ready yet.
+- **Obsidian loads MathJax lazily, and its CHTML output needs a stylesheet.** The plugin asks for the engine at startup, renders a tiny formula through Obsidian's own renderer so the app attaches the MathJax CHTML stylesheet, attaches it directly if the app has not, and retries a formula render until it produces real content. A formula never stays raw or invisible because the math engine was not ready.
 - **Other decoration plugins can overlap.** Disable Symbols Prettifier; other math or decoration plugins may also draw over the same range.
 
 ---

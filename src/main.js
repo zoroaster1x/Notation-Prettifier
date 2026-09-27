@@ -18,7 +18,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Modal, Notice, Plugin, Setting, editorLivePreviewField, loadMathJax, renderMath } from "obsidian";
+import { MarkdownRenderer, Modal, Notice, Plugin, Setting, editorLivePreviewField, loadMathJax, renderMath } from "obsidian";
 import { createEditorExtension, refreshEditors } from "./editor.js";
 import {
   bakeText,
@@ -28,7 +28,7 @@ import {
   detectShortcutMatches,
   detectSpans,
 } from "./engine.js";
-import { ensureMathJax } from "./math.js";
+import { attachMathStylesheet, ensureMathJax, hasMathStylesheet } from "./math.js";
 import { readingProcessor } from "./reading.js";
 import { compileRules, compileShortcuts, mathWordsFor, shortcutTokenRegex } from "./rules.js";
 import { DEFAULT_SETTINGS, NotationPrettifierSettingTab } from "./settings.js";
@@ -97,7 +97,7 @@ export default class NotationPrettifierPlugin extends Plugin {
     this._cache = null;
     this._configVersion = 0;
     await this.loadSettings();
-    ensureMathJax().then(() => this.refreshPreviews());
+    ensureMathJax().then(() => this.warmUpMath());
     this.registerEditorExtension(createEditorExtension(this));
     this.registerMarkdownPostProcessor(readingProcessor(this));
     this.addCommand({
@@ -317,10 +317,42 @@ export default class NotationPrettifierPlugin extends Plugin {
   mathRenderState() {
     try {
       const element = renderMath("n^{2}", false);
-      return element ? "ok (" + element.tagName.toLowerCase() + ")" : "returned nothing";
+      const html = element && element.outerHTML ? element.outerHTML.slice(0, 160) : "";
+      return (
+        (element ? "ok" : "returned nothing") +
+        ", stylesheet " +
+        (hasMathStylesheet() ? "attached" : "missing") +
+        (html ? ", " + html : "")
+      );
     } catch (error) {
       return "threw: " + (error && error.message ? error.message : String(error));
     }
+  }
+
+  // Rendering a tiny formula once through Obsidian's own renderer makes the app
+  // attach the MathJax CHTML stylesheet, which is what makes the glyphs of
+  // plugin-rendered math visible. The direct attach covers a vault that never
+  // rendered its own math.
+  warmUpMath() {
+    try {
+      const holder = document.createElement("div");
+      holder.style.position = "absolute";
+      holder.style.visibility = "hidden";
+      holder.style.pointerEvents = "none";
+      document.body.appendChild(holder);
+      const result = MarkdownRenderer.render(this.app, "$x$", holder, "", this);
+      if (result && typeof result.then === "function") {
+        result.then(() => holder.remove()).catch(() => holder.remove());
+      } else {
+        setTimeout(() => holder.remove(), 500);
+      }
+    } catch (error) {
+      // The direct stylesheet attach below still runs.
+    }
+    setTimeout(() => {
+      attachMathStylesheet();
+      this.refreshPreviews();
+    }, 300);
   }
 
   refreshPreviews() {
