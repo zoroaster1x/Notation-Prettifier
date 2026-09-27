@@ -71,6 +71,35 @@ styles.css        widget and settings styles
 test/stubs/       obsidian and @codemirror stubs used by the smoke test
 ```
 
+## 5b. Debugging in the running app
+
+The plugin ships its own diagnostics, and there is a way to inspect Obsidian
+itself when a screenshot is not enough.
+
+* **Check the current line (diagnostics)** reports the line, the spans, their
+  LaTeX, the shortcut matches, the editor mode (Live Preview or Source), the
+  cursor-inside-span state, and the math render state (whether `renderMath`
+  works and whether the CHTML stylesheet is attached).
+* **Write a debug report to the plugin folder** writes
+  `<vault>/.obsidian/plugins/notation-prettifier/debug-report.json`. It carries
+  the plugin version, the settings, the MathJax version, the stylesheet state,
+  every head style that mentions math, and the real DOM, computed style and box
+  of a rendered sample. `src/debug.js` builds it; it is a command, never a
+  background write, so the plugin stays quiet.
+* **Inspecting the real renderer.** Electron accepts
+  `--remote-debugging-port=9222`; the Flatpak launcher reads it from
+  `~/.var/app/md.obsidian.Obsidian/config/obsidian/user-flags.conf`. Add the
+  line, restart Obsidian, then talk to `http://127.0.0.1:9222/json` with a
+  WebSocket and `Runtime.evaluate` / `Page.captureScreenshot`. That is how the
+  MathJax stylesheet, the widget boxes and the typed-letter behaviour were
+  diagnosed. **Remove the flag when done**: it opens a local debug port that
+  any local process can use.
+* Through that channel, `app` is reachable, so a scratch note can be created,
+  typed into and deleted, and `app.plugins.disablePlugin(id)` plus
+  `enablePlugin(id)` reloads the plugin without restarting the app. Note that
+  Obsidian caches manifests: call `app.plugins.loadManifests()` before the
+  reload to see the new version number.
+
 ## 6. Format knowledge worth keeping
 
 These cost real time to find. They are handled in the current code, so treat
