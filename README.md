@@ -465,8 +465,8 @@ Last run on a library of 225 old optometry notes (23,860 lines):
 
 | Check | Result |
 |---|---|
-| Corpus over 225 notes, read only | 0 failures, about 0.2 s |
-| Formulas wrapped | 684, across 63 files; 162 files needed no change |
+| Corpus over 225 notes, read only | 0 failures, about 0.3 s |
+| Formulas wrapped | 606, across 46 files; 179 files needed no change |
 | Protected regions preserved | 3,317 of 3,317 |
 | Converted lines rendered through the Reading view | 300 lines, 375 inline elements, no empty formula |
 | Engine checks (`test/convert.mjs`) | 71 pass, 0 fail |
