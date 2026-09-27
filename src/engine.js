@@ -47,6 +47,9 @@ const NUMBER = /(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?(?:[eE][-+]?\d+)?|\
 const WORD = /[A-Za-z]+/y;
 const GREEK_CHAR = /[\u00b5\u03bc\u0370-\u03ff\u1f00-\u1fff]/y;
 const OP2 = /(?:<=>|<->|->|<-|=>|<=|>=|!=|~=|\+-|-+|\/\/)/y;
+// A run of two or more equals is markdown highlight (==text==) or a setext
+// marker, never a relation, so it ends a span instead of opening one.
+const EQ_RUN = /={2,}/y;
 const OP1 = /[=+\-<>±×·⋅→←↔⇒⇐⇔≤≥≠≈÷°%^_\u2212\u2013\u2014\u2261\u2264\u2265\u2260\u00b1\u2213\/]/y;
 const APOS = /['\u2019\u2032]/y;
 const OPEN = /[([{]/y;
@@ -57,6 +60,17 @@ const WIKILINK = /!?\[\[[^\]\n]*\]\]/y;
 const MDLINK = /\[[^\]\n]*\]\([^)\n]*\)/y;
 const FOOTREF = /\[\^[^\]\n]*\]/y;
 const URL = /https?:\/\/[^\s)]+/y;
+// A real HTML tag: a known element, or any name with attributes. A bare
+// unknown tag is left alone so a shortcut such as <deg> still converts.
+const HTML_TAG = /<\/?([A-Za-z][A-Za-z0-9-]*)((?:\s[^>\n]*)?)>/y;
+const KNOWN_TAGS = new Set([
+  "a", "audio", "b", "big", "blockquote", "br", "center", "code", "del",
+  "details", "div", "em", "figcaption", "figure", "font", "h1", "h2", "h3",
+  "h4", "h5", "h6", "hr", "i", "iframe", "img", "input", "ins", "kbd",
+  "label", "li", "mark", "ol", "p", "pre", "q", "s", "script", "small",
+  "span", "strong", "style", "sub", "summary", "sup", "table", "tbody",
+  "td", "tfoot", "th", "thead", "tr", "u", "ul", "video",
+]);
 const ANY = /[\s\S]/y;
 
 const UNIT_SET = new Set(UNIT_WORDS);
@@ -212,6 +226,18 @@ function scanLineInline(text, from, to, pre, found) {
       found.push({ from: i, to: link.to });
       i = link.to;
       continue;
+    }
+    if (ch === "<") {
+      HTML_TAG.lastIndex = i;
+      const tag = HTML_TAG.exec(text);
+      if (tag && tag.index === i && i + tag[0].length <= to) {
+        const name = tag[1].toLowerCase();
+        if (tag[2] !== "" || KNOWN_TAGS.has(name)) {
+          found.push({ from: i, to: i + tag[0].length });
+          i += tag[0].length;
+          continue;
+        }
+      }
     }
     i++;
   }
@@ -398,7 +424,25 @@ function classifyWord(word, mathWords) {
   return "word";
 }
 
-function tokenize(text, from, to, mathWords, shortcutToken) {
+// Shortcuts whose replacement is an operator take part in formula detection
+// with that replacement, so A <- B qualifies in the reading view exactly as it
+// does after baking. A replacement that is not an operator (the degree sign)
+// stays an operand.
+const SHORTCUT_OPERATORS = new Set([
+  "\u2192", "\u2190", "\u2194", "\u21d2", "\u21d0", "\u21d4",
+  "\u2264", "\u2265", "\u2260", "\u2261", "\u00b1", "\u2213",
+  "\u00d7", "\u00f7", "\u00b7", "\u22c5",
+]);
+
+export function shortcutMapFor(shortcuts) {
+  const map = new Map();
+  for (const shortcut of shortcuts || []) {
+    if (shortcut && shortcut.literal) map.set(shortcut.literal, shortcut.replacement);
+  }
+  return map;
+}
+
+function tokenize(text, from, to, mathWords, shortcutToken, shortcutMap) {
   const tokens = [];
   let i = from;
   while (i < to) {
@@ -407,7 +451,12 @@ function tokenize(text, from, to, mathWords, shortcutToken) {
       shortcutToken.lastIndex = i;
       const shortcut = shortcutToken.exec(text);
       if (shortcut && shortcut.index === i && i + shortcut[0].length <= to) {
-        tokens.push(token("unit", shortcut[0], i, i + shortcut[0].length));
+        const replacement = shortcutMap ? shortcutMap.get(shortcut[0]) : undefined;
+        if (replacement && SHORTCUT_OPERATORS.has(replacement)) {
+          tokens.push(token("op", replacement, i, i + shortcut[0].length));
+        } else {
+          tokens.push(token("unit", shortcut[0], i, i + shortcut[0].length));
+        }
         i += shortcut[0].length;
         continue;
       }
@@ -463,6 +512,11 @@ function tokenize(text, from, to, mathWords, shortcutToken) {
     }
     if ((match = tryMatch(OP2, text, i, to))) {
       tokens.push(token("op", match.value, i, match.to));
+      i = match.to;
+      continue;
+    }
+    if ((match = tryMatch(EQ_RUN, text, i, to))) {
+      tokens.push(token("term", match.value, i, match.to));
       i = match.to;
       continue;
     }
@@ -582,11 +636,11 @@ const TRIGGER_SOURCE =
   "[=<>^_'\\\\±×·⋅→←↔⇒⇐⇔≤≥≠≈÷≡\u00b2\u00b3\u00b9\u2070\u2074-\u2079\u2080-\u2089]";
 const TRIGGER = new RegExp(TRIGGER_SOURCE, "g");
 
-function scanSegment(text, from, to, out, mathWords, shortcutToken) {
+function scanSegment(text, from, to, out, mathWords, shortcutToken, shortcutMap) {
   TRIGGER.lastIndex = from;
   const trigger = TRIGGER.exec(text);
   if (!trigger || trigger.index >= to) return;
-  const tokens = tokenize(text, from, to, mathWords, shortcutToken);
+  const tokens = tokenize(text, from, to, mathWords, shortcutToken, shortcutMap);
   let start = -1;
   let end = -1;
   let operands = [];
@@ -768,14 +822,15 @@ function qualifyScript(scripts, index) {
 export function detectSpans(text, options = {}) {
   const mathWords = options.mathWords || new Set();
   const shortcutToken = options.shortcutToken || null;
+  const shortcutMap = options.shortcutMap || null;
   const prot = options.protected || protectedRanges(text);
   const out = [];
   let pos = 0;
   for (const range of prot) {
-    if (range.from > pos) scanSegment(text, pos, range.from, out, mathWords, shortcutToken);
+    if (range.from > pos) scanSegment(text, pos, range.from, out, mathWords, shortcutToken, shortcutMap);
     if (range.to > pos) pos = range.to;
   }
-  if (pos < text.length) scanSegment(text, pos, text.length, out, mathWords, shortcutToken);
+  if (pos < text.length) scanSegment(text, pos, text.length, out, mathWords, shortcutToken, shortcutMap);
   for (const span of out) span.raw = text.slice(span.from, span.to);
   return out;
 }
@@ -859,6 +914,7 @@ function makeBakeState(text, options) {
     shortcuts: options.shortcuts || [],
     mathWords: options.mathWords || new Set(),
     shortcutToken: options.shortcutToken || null,
+    shortcutMap: options.shortcutMap || null,
     display: options.displayFormulaLines !== false,
     prot: options.protected || protectedRanges(text),
     result: "",
@@ -882,7 +938,7 @@ function bakeNextLine(state, line) {
     return {
       gap,
       seg,
-      spans: detectSpans(seg, { mathWords: state.mathWords, shortcutToken: state.shortcutToken, protected: [] }),
+      spans: detectSpans(seg, { mathWords: state.mathWords, shortcutToken: state.shortcutToken, shortcutMap: state.shortcutMap, protected: [] }),
     };
   });
   const spanTotal = pieces.reduce((sum, piece) => sum + piece.spans.length, 0);

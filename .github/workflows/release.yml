@@ -83,15 +83,35 @@ jobs:
             RANGE="$PREVIOUS..HEAD"
             PREVIOUS_LABEL="$PREVIOUS"
           fi
-          git log $RANGE --pretty=format:'- %s' > /tmp/changes.txt
-          VERSION="${{ steps.version.outputs.version }}" PREVIOUS_LABEL="$PREVIOUS_LABEL" python3 - <<'PY'
+          git log $RANGE --pretty=format:'%H%x1f%s%x1f%b%x1e' > /tmp/commits.txt
+          VERSION="${{ steps.version.outputs.version }}" PREVIOUS_LABEL="$PREVIOUS_LABEL" REPO="${{ github.repository }}" python3 - <<'PY'
           import os
+          repo = os.environ["REPO"]
+          raw = open("/tmp/commits.txt", encoding="utf-8").read()
+          records = [record for record in raw.split("\x1e") if record.strip()]
+          bullets = []
+          entries = []
+          for record in records:
+              parts = record.split("\x1f")
+              sha = parts[0].strip()
+              subject = parts[1].strip() if len(parts) > 1 else ""
+              body = parts[2].strip() if len(parts) > 2 else ""
+              short = sha[:7]
+              url = "https://github.com/%s/commit/%s" % (repo, sha)
+              bullets.append("- %s ([%s](%s))" % (subject, short, url))
+              entry = ["### [%s](%s) %s" % (short, url, subject), ""]
+              if body:
+                  entry.append(body)
+                  entry.append("")
+              entries.append("\n".join(entry))
+          changes = "\n".join(bullets) or "- No changes since the previous release."
+          commits = "\n\n".join(entries) or "No commits to list."
           template = open(".github/release-template.md", encoding="utf-8").read()
-          changes = open("/tmp/changes.txt", encoding="utf-8").read().strip() or "- No changes since the previous release."
           body = (
               template.replace("{{VERSION}}", os.environ["VERSION"])
               .replace("{{PREVIOUS}}", os.environ["PREVIOUS_LABEL"])
               .replace("{{CHANGES}}", changes)
+              .replace("{{COMMITS}}", commits)
           )
           open("/tmp/release-body.md", "w", encoding="utf-8").write(body)
           PY

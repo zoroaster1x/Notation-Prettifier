@@ -1,13 +1,13 @@
 {
   "name": "notation-prettifier",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Renders rough notation (L^', n^(i), i_1^', sqrt, x as times, theta, <degrees>) as LaTeX math or symbols in the editor and reading view, and bakes the LaTeX into the note on command. Rules run offline.",
   "main": "main.js",
   "author": "Zoroaster1x",
   "scripts": {
     "dev": "bun esbuild.config.mjs",
     "build": "bun esbuild.config.mjs production",
-    "test": "bun test/convert.mjs && bun test/editor.mjs && bun test/examples.mjs && bun test/smoke.mjs && bun test/privacy.mjs",
+    "test": "bun test/convert.mjs && bun test/editor.mjs && bun test/render.mjs && bun test/examples.mjs && bun test/smoke.mjs && bun test/privacy.mjs",
     "test:files": "bun test/corpus.mjs",
     "bench": "bun test/bench.mjs",
     "install-plugin": "bash install.sh"

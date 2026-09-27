@@ -42,7 +42,7 @@
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
-import { bakeText, candidateRegex, convertSpan, protectedRanges, rangeAt, splitLines } from "../src/engine.js";
+import { bakeText, candidateRegex, convertSpan, protectedRanges, rangeAt, shortcutMapFor, splitLines } from "../src/engine.js";
 import { processElement } from "../src/reading.js";
 import {
   DEFAULT_SHORTCUTS_TEXT,
@@ -101,6 +101,7 @@ const options = {
   shortcuts,
   mathWords: mathWordsFor(settings),
   shortcutToken: shortcutTokenRegex(shortcuts),
+  shortcutMap: shortcutMapFor(shortcuts),
   displayFormulaLines: true,
 };
 
@@ -168,6 +169,7 @@ const fakePlugin = {
   shortcuts: () => options.shortcuts,
   mathWords: () => options.mathWords,
   shortcutToken: () => options.shortcutToken,
+  shortcutMap: () => options.shortcutMap,
   candidate: () => candidateRegex(options.shortcuts),
   convert: (raw) => convertSpan(raw, options.rules),
 };

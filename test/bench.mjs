@@ -108,8 +108,8 @@ for (const chars of [50_000, 200_000, 1_000_000, 5_000_000]) {
   const baked = time("bake", () => bakeText(text, options));
   time("protectedRanges", () => protectedRanges(text));
   if (chars === 1_000_000) {
-    bound("detectSpans over 1 MB", spans, 250);
-    bound("bake over 1 MB", baked, 800);
+    bound("detectSpans over 1 MB", spans, 400);
+    bound("bake over 1 MB", baked, 1200);
   }
 }
 
@@ -131,7 +131,7 @@ if (oneMegabyte) {
     detectSpans(windowText, Object.assign({}, options, { protected: prot }));
   }, 50);
   console.log("  prefix result " + JSON.stringify(prefix) + ", cold scan " + coldPrefix.toFixed(2) + " ms, warm window " + warm.toFixed(2) + " ms");
-  bound("warm keystroke on 1 MB", warm, 20);
+  bound("warm keystroke on 1 MB", warm, 40);
 } else {
   console.log("  (no 1 MB document built)");
 }

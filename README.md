@@ -128,6 +128,7 @@ The engine protects these regions before it does anything:
 | Thematic breaks | `---`, `***`, `- - -` |
 | Setext heading markers | a line of `===` under a title |
 | Markdown table separator rows | `\| --- \| :---: \|` |
+| Inline HTML tags | `<span style="color: red">`, `<mark>`, `<u>`, `<sup>`, `<font color="red">` |
 
 The table row and thematic break protection is not cosmetic: the `--` and `===` shortcuts would otherwise turn `|---|---|` into en dashes and a `===` heading marker into `≡`.
 
@@ -410,6 +411,7 @@ These are honest gaps, not bugs waiting to be reported.
 - **A display formula must be alone on its line.** Anything before or after it keeps the inline form.
 - **Multi-letter subscripts follow the source.** `F_LM` becomes `F_{LM}`, and `F_LMx(` is read as `F_{LM}\times(`.
 - **Shortcuts are literal and global.** Choose distinctive literals; a `<` or a single letter would be a bad shortcut. An angle-bracket shortcut at the start of a line can be read as an HTML tag by Markdown and swallow the lines below, which is why the plugin rewrites those shortcuts as you type by default, and why the square bracket degree forms exist.
+- **Bold, italic, highlight, strikethrough and coloured text all work around a formula.** The markers stay outside the math, and the formula renders inside the wrapper. Inline HTML is protected, so `<span style="color: red">` is never read as notation.
 - **A spaced single letter ends a script qualified formula.** `n^2 x` renders `$n^{2}$ x`, because a lone letter after a space is prose. A relation keeps its spaced operands: `L = L + F`, `cos θ = 0.5` and `F = 2.50 D` all stay one formula. Without the space the letter joins: `n^2x` renders `$n^{2}x$`.
 - **A formula is drawn only when the cursor is not strictly inside it.** A cursor at either edge still draws it, so a freshly typed formula renders without moving the cursor; place the cursor inside the span to edit the raw text.
 - **Obsidian loads MathJax lazily, and its CHTML output needs a stylesheet.** The plugin asks for the engine at startup, renders a tiny formula through Obsidian's own renderer so the app attaches the MathJax CHTML stylesheet, attaches it directly if the app has not, and retries a formula render until it produces real content. A formula never stays raw or invisible because the math engine was not ready.
@@ -451,7 +453,8 @@ bun esbuild.config.mjs production   # build main.js
 bun test/convert.mjs                # the conversion engine, 77 checks
 bun test/editor.mjs                 # the live window scanner, 13 checks
 bun test/examples.mjs               # the documented examples in this README, 44 checks
-bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 57 checks
+bun test/render.mjs                 # every render context, failure path and styler, 96 checks
+bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 65 checks
 bun test/privacy.mjs                # no personal paths in tracked files
 bun test/bench.mjs                  # performance report and bounds
 ```
@@ -481,7 +484,8 @@ Last run on a library of 225 old optometry notes (23,860 lines):
 | Engine checks (`test/convert.mjs`) | 77 pass, 0 fail |
 | Live window scanner (`test/editor.mjs`) | 13 pass, 0 fail |
 | Documented examples (`test/examples.mjs`) | 44 pass, 0 fail |
-| Bundle checks (`test/smoke.mjs`) | 57 pass, 0 fail |
+| Render contexts and failure paths (`test/render.mjs`) | 96 pass, 0 fail |
+| Bundle checks (`test/smoke.mjs`) | 65 pass, 0 fail |
 | Performance (`test/bench.mjs`) | 0 over bound, 0.37 ms warm keystroke on a 1 MB note |
 
 The documented examples in this README are pinned by `test/examples.mjs`, so a rule change that disagrees with the manual fails the suite.

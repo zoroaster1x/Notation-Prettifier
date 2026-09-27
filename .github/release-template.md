@@ -42,3 +42,12 @@ Crypto isn't your thing? Starring the repository, filing clear bug reports with 
 ## License
 
 GPL-3.0-or-later. Copyright (C) 2026 Zoroaster1x.
+
+## Full commit messages
+
+<details>
+<summary>Every commit since {{PREVIOUS}}, with its message and a link</summary>
+
+{{COMMITS}}
+
+</details>

@@ -26,7 +26,9 @@
 // invisible, so nothing is drawn until the stylesheet is confirmed: the raw
 // text stays visible and a timer retries. Invisible math can never happen.
 
-import { loadMathJax, renderMath } from "obsidian";
+// The Obsidian module is read through its namespace so the test stubs can swap
+// renderMath and loadMathJax between cases and exercise the failure paths.
+import * as obsidian from "obsidian";
 
 let loadedPromise = null;
 let attachedStylesheet = null;
@@ -34,8 +36,8 @@ let attachedStylesheet = null;
 export function ensureMathJax() {
   if (loadedPromise) return loadedPromise;
   try {
-    if (typeof loadMathJax === "function") {
-      loadedPromise = Promise.resolve(loadMathJax());
+    if (typeof obsidian.loadMathJax === "function") {
+      loadedPromise = Promise.resolve(obsidian.loadMathJax());
       loadedPromise.catch(() => {});
     } else {
       loadedPromise = Promise.resolve();
@@ -77,19 +79,35 @@ export function hasMathStylesheet() {
   return false;
 }
 
-export function attachMathStylesheet() {
-  if (hasMathStylesheet()) return true;
+// MathJax's CHTML stylesheet grows as new characters are typeset: a glyph's
+// content rule is added when its character is first used. Obsidian re-applies
+// the stylesheet after every render for that reason, and toggling the data
+// attribute forces the browser to re-evaluate the rules. Skipping this leaves
+// every newly used character blank while older ones keep drawing, which looks
+// exactly like "only the primes show".
+function refreshStylesheet() {
+  const mathJax = mathJaxGlobal();
+  if (!mathJax || typeof mathJax.chtmlStylesheet !== "function") return false;
+  let sheet = null;
   try {
-    const mathJax = mathJaxGlobal();
-    if (!mathJax || typeof mathJax.chtmlStylesheet !== "function") return false;
-    const sheet = mathJax.chtmlStylesheet();
-    if (!sheet) return false;
-    if (!document.head.contains(sheet)) document.head.appendChild(sheet);
-    attachedStylesheet = sheet;
-    return true;
+    sheet = mathJax.chtmlStylesheet();
   } catch (error) {
     return false;
   }
+  if (!sheet) return false;
+  if (attachedStylesheet && attachedStylesheet !== sheet && attachedStylesheet.parentNode) {
+    attachedStylesheet.remove();
+  }
+  if (!document.head.contains(sheet)) document.head.appendChild(sheet);
+  attachedStylesheet = sheet;
+  if (sheet.dataset) {
+    sheet.dataset.change = sheet.dataset.change === "1" ? "2" : "1";
+  }
+  return true;
+}
+
+export function attachMathStylesheet() {
+  return refreshStylesheet() || hasMathStylesheet();
 }
 
 function looksRendered(element) {
@@ -104,18 +122,19 @@ function looksRendered(element) {
 
 export function tryRenderMath(latex, display) {
   try {
-    if (typeof renderMath !== "function") {
+    if (typeof obsidian.renderMath !== "function") {
       ensureMathJax();
       return null;
     }
-    const element = renderMath(latex, display);
+    const element = obsidian.renderMath(latex, display);
     if (!looksRendered(element)) {
       ensureMathJax();
       return null;
     }
-    // A container without the glyph stylesheet draws nothing. Keep the raw
-    // text instead and retry once the stylesheet is attached.
-    if (!hasMathStylesheet() && !attachMathStylesheet()) return null;
+    // The stylesheet gains the rules for every newly used character, so it is
+    // re-applied after each render, before the element is accepted.
+    refreshStylesheet();
+    if (!hasMathStylesheet()) return null;
     return element;
   } catch (error) {
     ensureMathJax();

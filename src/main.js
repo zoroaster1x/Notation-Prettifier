@@ -27,6 +27,7 @@ import {
   convertSpan,
   detectShortcutMatches,
   detectSpans,
+  shortcutMapFor,
 } from "./engine.js";
 import { attachMathStylesheet, ensureMathJax, hasMathStylesheet } from "./math.js";
 import { buildDebugReport } from "./debug.js";
@@ -144,10 +145,14 @@ export default class NotationPrettifierPlugin extends Plugin {
 
   async saveSettings() {
     this._cache = null;
+    this._conversions = null;
     this._configVersion++;
     this.applyMathScale();
     await this.saveData(this.settings);
     refreshEditors(this.app);
+    // Reading view panes hold their own render, so a pattern change has to ask
+    // them to draw again or the old conversion stays on screen.
+    this.refreshPreviews();
   }
 
   // MathJax draws its letters narrower than the interface font, so the reader
@@ -181,6 +186,7 @@ export default class NotationPrettifierPlugin extends Plugin {
         shortcuts,
         mathWords: mathWordsFor(this.settings),
         shortcutToken: shortcutTokenRegex(shortcuts),
+        shortcutMap: shortcutMapFor(shortcuts),
         candidate: candidateRegex(shortcuts),
       };
       this._conversions = null;
@@ -204,20 +210,30 @@ export default class NotationPrettifierPlugin extends Plugin {
     return this._compiled().shortcutToken;
   }
 
+  shortcutMap() {
+    return this._compiled().shortcutMap;
+  }
+
   candidate() {
     return this._compiled().candidate;
   }
 
   // The same raw span appears in many places (a formula repeated in a table,
   // a reading view re-render, a settings preview). Rules are cheap but not
-  // free, so the compiled result is memoised per configuration version.
+  // free, so the compiled result is memoised per configuration version. The
+  // cache is read again after rules() because a settings change can reset it.
   convert(raw) {
-    if (!this._conversions) this._conversions = new Map();
-    let latex = this._conversions.get(raw);
+    let cache = this._conversions;
+    if (!cache) {
+      cache = new Map();
+      this._conversions = cache;
+    }
+    let latex = cache.get(raw);
     if (latex === undefined) {
-      if (this._conversions.size >= 4000) this._conversions.clear();
       latex = convertSpan(raw, this.rules());
-      this._conversions.set(raw, latex);
+      cache = this._conversions || (this._conversions = new Map());
+      if (cache.size >= 4000) cache.clear();
+      cache.set(raw, latex);
     }
     return latex;
   }
@@ -229,6 +245,7 @@ export default class NotationPrettifierPlugin extends Plugin {
         shortcuts: this.shortcuts(),
         mathWords: this.mathWords(),
         shortcutToken: this.shortcutToken(),
+        shortcutMap: this.shortcutMap(),
         displayFormulaLines: this.settings.displayFormulaLines !== false,
       },
       overrides || {}

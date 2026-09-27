@@ -111,6 +111,7 @@ function collectWindow(doc, from, to, plugin) {
   const spans = detectSpans(text, {
     mathWords: plugin.mathWords(),
     shortcutToken: plugin.shortcutToken(),
+    shortcutMap: plugin.shortcutMap(),
     protected: protectedList,
   });
   const shortcuts = detectShortcutMatches(text, {

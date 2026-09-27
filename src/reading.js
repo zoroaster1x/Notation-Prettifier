@@ -98,6 +98,7 @@ function renderTextNode(node, plugin) {
   const spans = detectSpans(value, {
     mathWords: plugin.mathWords(),
     shortcutToken: plugin.shortcutToken(),
+    shortcutMap: plugin.shortcutMap(),
     protected: protectedRangesList,
   });
   const shortcuts = detectShortcutMatches(value, {

@@ -32,6 +32,7 @@ import {
   detectShortcutMatches,
   detectSpans,
   protectedRanges,
+  shortcutMapFor,
 } from "../src/engine.js";
 import {
   DEFAULT_SHORTCUTS_TEXT,
@@ -189,6 +190,49 @@ eq("two spaces end it too", bake("n^2  x").text, "$n^{2}$  x");
 eq("a relation keeps spaced operands", bake("L = L + F").text, "$L = L + F$");
 eq("a function keeps a spaced argument", bake("cos \u03b8 = 0.5").text, "$\\cos \u03b8 = 0.5$");
 eq("a unit keeps its space", bake("F = 2.50 D").text, "$F = 2.50\\,\\text{D}$");
+
+console.log("--- markdown formatting around formulas");
+eq("bold around a formula", bake("**L^' = L + F**").text, "**$L' = L + F$**");
+eq("italic around a formula", bake("*L^' = L + F*").text, "*$L' = L + F$*");
+eq("bold italic around a formula", bake("***L^' = L + F***").text, "***$L' = L + F$***");
+eq("underscore emphasis", bake("_L^' = L + F_").text, "_$L' = L + F$_");
+eq("bold Snell line", bake("**n^(i) = n^(')i^(')**").text, "**$n^{i} = n'i'$**");
+eq("bold in a table cell", bake("| **L^' = L + F** |").text, "| **$L' = L + F$** |");
+eq("bold in a quote", bake("> **L^' = L + F**").text, "> **$L' = L + F$**");
+eq(
+  "a link protects its label",
+  bake("[L^' = L + F](https://example.com)").text,
+  "[L^' = L + F](https://example.com)"
+);
+eq("highlight around a formula", bake("==L^' = L + F==").text, "==$L' = L + F$==");
+eq("strikethrough around a formula", bake("~~L^' = L + F~~").text, "~~$L' = L + F$~~");
+eq("html mark around a formula", bake("<mark>L^' = L + F</mark>").text, "<mark>$L' = L + F$</mark>");
+eq("html underline around a formula", bake("<u>L^' = L + F</u>").text, "<u>$L' = L + F$</u>");
+eq(
+  "html colour around a formula",
+  bake('<span style="color: red">L^\' = L + F</span>').text,
+  '<span style="color: red">$L\' = L + F$</span>'
+);
+eq(
+  "coloured text plugin markup",
+  bake('<span class="colored-text" style="color:#e91e63">L^\' = L + F</span>').text,
+  '<span class="colored-text" style="color:#e91e63">$L\' = L + F$</span>'
+);
+eq("a broken line tag is protected", bake("a<br>b").text, "a<br>b");
+eq("the degree shortcut still fires", bake("<deg>").text, "\u00b0");
+const formatted = bake("**L^' = L + F**").text;
+const innerSpans = [];
+const dollarBlocks = formatted.split("$$");
+for (let i = 1; i < dollarBlocks.length; i += 2) innerSpans.push(dollarBlocks[i]);
+for (let i = 0; i < dollarBlocks.length; i += 2) {
+  const parts = dollarBlocks[i].split("$");
+  for (let j = 1; j < parts.length; j += 2) innerSpans.push(parts[j]);
+}
+eq(
+  "formatting markers never enter a span",
+  innerSpans.length > 0 && innerSpans.every((span) => span.indexOf("*") === -1 && span.indexOf("`") === -1) ? "clean" : "marker inside",
+  "clean"
+);
 
 console.log("--- things that must stay plain");
 eq("possessive after a number", bake("Y2's bay this week").text, "Y2's bay this week");

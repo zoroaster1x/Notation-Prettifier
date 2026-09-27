@@ -58,9 +58,18 @@ const loaded = require(bundlePath);
 const PluginClass = loaded.default || loaded;
 const obsidian = require("obsidian");
 
+const refreshLog = { dispatched: 0, rerendered: 0 };
 const app = {
   workspace: {
-    iterateAllLeaves() {},
+    iterateAllLeaves(callback) {
+      callback({
+        view: {
+          editor: { cm: { dispatch: () => { refreshLog.dispatched++; } } },
+          previewMode: { rerender: () => { refreshLog.rerendered++; } },
+        },
+      });
+      callback({ view: { editor: null, previewMode: null } });
+    },
     getActiveViewOfType() {
       return null;
     },
@@ -258,6 +267,18 @@ check("diagnostics finds the span", reportText.indexOf("Formula spans: 1") !== -
 check("diagnostics reports math rendering", reportText.indexOf("Math rendering: ok") !== -1, reportText.slice(0, 260));
 check("diagnostics shows the latex", reportText.indexOf("n^{i} = n'i'") !== -1, reportText.slice(0, 300));
 check("diagnostics names the cursor rule", reportText.indexOf("cursor is inside this span") !== -1, reportText.slice(0, 300));
+
+console.log("--- settings changes refresh open views");
+plugin.settings.groups.greek = false;
+plugin.settings.customRulesText = "theta => T";
+await plugin.saveSettings();
+check("a custom rule applies after save", plugin.convert("theta = 2") === "T = 2", plugin.convert("theta = 2"));
+check("open editors are asked to redraw", refreshLog.dispatched > 0, String(refreshLog.dispatched));
+check("open previews are asked to redraw", refreshLog.rerendered > 0, String(refreshLog.rerendered));
+plugin.settings.groups.greek = true;
+plugin.settings.customRulesText = "";
+await plugin.saveSettings();
+check("restoring the settings reverts the conversion", plugin.convert("theta = 2") === "\\theta = 2", plugin.convert("theta = 2"));
 
 console.log("--- settings");
 const tab = registered.settingTabs[0];

@@ -178,6 +178,24 @@ them as regressions to avoid.
   character sit at stale positions and a single typed letter looks invisible
   until the next keystroke. `MathWidget.toDOM(view)` calls it on layout, on the
   next frame, at 60 and 300 ms, and when `document.fonts.ready` resolves.
+* MathJax's CHTML stylesheet grows as new characters are typeset, and a
+  newly added glyph rule is blank until the stylesheet is re-applied. Obsidian
+  re-applies it (and toggles a data attribute to force re-evaluation) after
+  every render; a plugin that applies it once leaves every later character
+  blank while older ones keep drawing, which looks like "only the primes
+  show". `src/math.js` calls `refreshStylesheet` after every render.
+* A shortcut whose replacement is an operator (`<-`, `->`, `<=`, `>=`) must
+  become an op token in detection, not a unit: otherwise the reading view
+  renders the glyph but never recognises the formula, while baking produces the
+  opposite result. `SHORTCUT_OPERATORS` in `src/engine.js` decides.
+* A settings change must reset the conversion cache before the next read. A
+  cached `convert()` read the old map, then `rules()` invalidated it and the
+  write landed on null; `saveSettings` now nulls both `_cache` and
+  `_conversions`, and reading previews are asked to re-render.
+* HTML tags are protected when they have attributes or a known element name.
+  A bare unknown tag is left alone so a shortcut such as `<deg>` still fires.
+  Runs of two or more equals are markdown highlight, not a relation, so they
+  end a span.
 * An angle bracket shortcut such as `<deg>` is an HTML block to the Markdown
   parser, and a line that starts with one swallows the lines below into one raw
   HTML block. The editor input handler rewrites a completed `<deg>` to `°` in
