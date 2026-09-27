@@ -272,6 +272,13 @@ const MarkdownRenderer = {
 
 const editorLivePreviewField = { __livePreview: true };
 
+const Platform = {
+  isDesktop: true,
+  isMobile: false,
+  isDesktopApp: true,
+  isMobileApp: false,
+};
+
 module.exports = {
   Component,
   Events,
@@ -290,5 +297,6 @@ module.exports = {
   loadMathJax,
   MarkdownRenderer,
   editorLivePreviewField,
+  Platform,
 };
 module.exports.default = module.exports;

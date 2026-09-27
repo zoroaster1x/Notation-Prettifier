@@ -51,15 +51,25 @@ function mathJaxGlobal() {
   if (typeof window !== "undefined" && window.MathJax) return window.MathJax;
   return null;
 }
+export { mathJaxGlobal };
 
 // The glyph rules are the marker. Obsidian's own CSS mentions mjx-container,
-// so that string is not enough to know the CHTML stylesheet is attached.
+// so that string is not enough to know the CHTML stylesheet is attached. The
+// authoritative answer is the stylesheet element MathJax hands out.
 export function hasMathStylesheet() {
   try {
     if (attachedStylesheet && attachedStylesheet.isConnected) return true;
+    const mathJax = mathJaxGlobal();
+    if (mathJax && typeof mathJax.chtmlStylesheet === "function") {
+      const sheet = mathJax.chtmlStylesheet();
+      if (sheet && document.head.contains(sheet)) {
+        attachedStylesheet = sheet;
+        return true;
+      }
+    }
     for (const style of Array.from(document.head.querySelectorAll("style"))) {
       const text = style.textContent || "";
-      if (text.indexOf("mjx-c") !== -1 || text.indexOf("MJX-TEX") !== -1) return true;
+      if (text.indexOf("mjx-c::before") !== -1) return true;
     }
   } catch (error) {
     // A document without a head is not a place this plugin runs.
@@ -114,20 +124,52 @@ export function tryRenderMath(latex, display) {
 }
 
 // Fills host with the typeset formula. Until the engine and its stylesheet
-// answer, the raw text stays visible and a timer tries again.
-export function renderMathInto(host, raw, latex, attempt = 0) {
+// answer, the raw text stays visible and a timer tries again. onLayout runs
+// whenever the host content changes, so CodeMirror can re-measure a widget
+// whose size arrived asynchronously.
+export function renderMathInto(host, raw, latex, attempt = 0, onLayout) {
   const rendered = tryRenderMath(latex, false);
   if (rendered) {
     while (host.firstChild) host.removeChild(host.firstChild);
     host.appendChild(rendered);
+    if (onLayout) onLayout();
+    verifyVisible(host, raw, latex, attempt, onLayout);
     return true;
   }
   host.textContent = raw;
+  if (onLayout) onLayout();
   if (attempt < 40) {
     setTimeout(() => {
       if (host.isConnected === false) return;
-      renderMathInto(host, raw, latex, attempt + 1);
+      renderMathInto(host, raw, latex, attempt + 1, onLayout);
     }, Math.min(2000, 100 + 80 * attempt));
   }
   return false;
+}
+
+// After the element is in the page, a zero sized box means the math did not
+// actually draw (a missing stylesheet, a missing font, an unusual host). Fall
+// back to the raw text and try again. Measurement is skipped in a test DOM,
+// which reports every element as zero sized.
+function verifyVisible(host, raw, latex, attempt, onLayout) {
+  if (!mathJaxGlobal()) return;
+  if (typeof host.getBoundingClientRect !== "function") return;
+  setTimeout(() => {
+    if (host.isConnected === false) return;
+    let visible = false;
+    try {
+      const rect = host.getBoundingClientRect();
+      visible = Boolean(rect && rect.width > 0 && rect.height > 0);
+      if (!visible && host.firstElementChild && typeof host.firstElementChild.getBoundingClientRect === "function") {
+        const childRect = host.firstElementChild.getBoundingClientRect();
+        visible = Boolean(childRect && childRect.width > 0 && childRect.height > 0);
+      }
+    } catch (error) {
+      return;
+    }
+    if (visible) return;
+    host.textContent = raw;
+    if (onLayout) onLayout();
+    renderMathInto(host, raw, latex, attempt + 1, onLayout);
+  }, 400);
 }

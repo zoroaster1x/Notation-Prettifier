@@ -29,6 +29,7 @@ import {
   detectSpans,
 } from "./engine.js";
 import { attachMathStylesheet, ensureMathJax, hasMathStylesheet } from "./math.js";
+import { buildDebugReport } from "./debug.js";
 import { readingProcessor } from "./reading.js";
 import { compileRules, compileShortcuts, mathWordsFor, shortcutTokenRegex } from "./rules.js";
 import { DEFAULT_SETTINGS, NotationPrettifierSettingTab } from "./settings.js";
@@ -119,6 +120,11 @@ export default class NotationPrettifierPlugin extends Plugin {
       id: "check-current-line",
       name: "Check the current line (diagnostics)",
       editorCallback: (editor) => this.checkCurrentLine(editor),
+    });
+    this.addCommand({
+      id: "write-debug-report",
+      name: "Write a debug report to the plugin folder",
+      callback: () => this.writeDebugReport(),
     });
     this.addCommand({
       id: "toggle-live-preview",
@@ -297,6 +303,17 @@ export default class NotationPrettifierPlugin extends Plugin {
     new Notice("Notation Prettifier: live preview " + (this.settings.livePreview ? "on" : "off") + ".");
   }
 
+  async writeDebugReport() {
+    const report = buildDebugReport(this);
+    const path = this.app.vault.configDir + "/plugins/notation-prettifier/debug-report.json";
+    try {
+      await this.app.vault.adapter.write(path, JSON.stringify(report, null, 2));
+      new Notice("Notation Prettifier: wrote " + path, 6000);
+    } catch (error) {
+      new Notice("Notation Prettifier: could not write the report: " + ((error && error.message) || error), 6000);
+    }
+  }
+
   editorMode(editor) {
     try {
       const cm = editor.cm;
@@ -370,11 +387,6 @@ export default class NotationPrettifierPlugin extends Plugin {
         }
       }, delay);
     });
-
-    new Notice(
-      "Notation Prettifier " + this.manifest.version + ": " + (hasMathStylesheet() ? "math ready" : "waiting for the math engine"),
-      3000
-    );
   }
 
   refreshPreviews() {

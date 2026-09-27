@@ -76,7 +76,8 @@ builds the bundle and copies the files into place. It needs `bun` or `npm`; with
 | **Convert notation in the selection or line to LaTeX** | With a selection, converts just that text. With only a cursor, converts the current line. Always inline `$...$`. | `Ctrl/Cmd + Shift + L` |
 | **Convert notation in the whole note to LaTeX** | Converts every line in the note. A line that is exactly one formula becomes `$$...$$`, unless you turn that off in settings. | none |
 | **Preview the whole note conversion** | Opens a modal with the converted note and Apply and Cancel buttons. Nothing is written until Apply. | none |
-| **Check the current line (diagnostics)** | Opens a report: the line, every formula span the engine found and its LaTeX, the shortcut matches, the editor mode, and whether the cursor is inside a span so it stays raw. Use it when a line does not render as expected. | none |
+| **Check the current line (diagnostics)** | Opens a report: the line, every formula span the engine found and its LaTeX, the shortcut matches, the editor mode, the math render state and whether the cursor is inside a span so it stays raw. Use it when a line does not render as expected. | none |
+| **Write a debug report to the plugin folder** | Writes `debug-report.json` beside `main.js`: the plugin version, the MathJax version and stylesheet state, the document's style tags, and the real DOM, computed style and box of a rendered sample. For a bug report that a screenshot cannot explain. | none |
 | **Toggle live preview** | Turns the live rendering on or off without opening settings. | none |
 
 All three conversion commands go through Obsidian's normal undo, so a single `Ctrl/Cmd + Z` restores the note. The commands never run on their own; the plugin does not touch a note unless you ask.
@@ -442,7 +443,7 @@ bun esbuild.config.mjs production   # build main.js
 bun test/convert.mjs                # the conversion engine, 71 checks
 bun test/editor.mjs                 # the live window scanner, 13 checks
 bun test/examples.mjs               # the documented examples in this README, 44 checks
-bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 56 checks
+bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 57 checks
 bun test/privacy.mjs                # no personal paths in tracked files
 bun test/bench.mjs                  # performance report and bounds
 ```
@@ -472,7 +473,7 @@ Last run on a library of 225 old optometry notes (23,860 lines):
 | Engine checks (`test/convert.mjs`) | 71 pass, 0 fail |
 | Live window scanner (`test/editor.mjs`) | 13 pass, 0 fail |
 | Documented examples (`test/examples.mjs`) | 44 pass, 0 fail |
-| Bundle checks (`test/smoke.mjs`) | 56 pass, 0 fail |
+| Bundle checks (`test/smoke.mjs`) | 57 pass, 0 fail |
 | Performance (`test/bench.mjs`) | 0 over bound, 0.37 ms warm keystroke on a 1 MB note |
 
 The documented examples in this README are pinned by `test/examples.mjs`, so a rule change that disagrees with the manual fails the suite.

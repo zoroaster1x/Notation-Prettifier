@@ -142,6 +142,13 @@ them as regressions to avoid.
   retries a render until the element holds real content. A container without
   the glyph stylesheet is refused, so the raw text stays visible and the retry
   swaps the typeset math in; invisible math must never be possible.
+* A widget whose size changes after insertion must ask CodeMirror to measure
+  again. MathJax's glyph widths come from CSS and its fonts load after the
+  element exists, so a formula widget changes size once or twice without a
+  document change; without `view.requestMeasure()` the caret and the next typed
+  character sit at stale positions and a single typed letter looks invisible
+  until the next keystroke. `MathWidget.toDOM(view)` calls it on layout, on the
+  next frame, at 60 and 300 ms, and when `document.fonts.ready` resolves.
 * An angle bracket shortcut such as `<deg>` is an HTML block to the Markdown
   parser, and a line that starts with one swallows the lines below into one raw
   HTML block. The editor input handler rewrites a completed `<deg>` to `°` in

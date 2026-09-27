@@ -56,7 +56,7 @@ check("editor extension registered", registered.editorExtensions.length === 1, J
 check("post processor registered", registered.postProcessors.length === 1);
 check("settings tab registered", registered.settingTabs.length === 1);
 const commandIds = (registered.commands || []).map((command) => command.id);
-for (const id of ["convert-selection", "convert-note", "preview-note", "check-current-line", "toggle-live-preview"]) {
+for (const id of ["convert-selection", "convert-note", "preview-note", "check-current-line", "write-debug-report", "toggle-live-preview"]) {
   check("command " + id, commandIds.indexOf(id) !== -1, commandIds.join(","));
 }
 

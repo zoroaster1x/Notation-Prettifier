@@ -52,10 +52,27 @@ class MathWidget extends WidgetType {
     return other.raw === this.raw && other.latex === this.latex;
   }
 
-  toDOM() {
+  toDOM(view) {
     const host = document.createElement("span");
     host.className = "np-math";
-    renderMathInto(host, this.raw, this.latex);
+    const layout = () => {
+      if (view && typeof view.requestMeasure === "function") view.requestMeasure();
+    };
+    renderMathInto(host, this.raw, this.latex, 0, layout);
+    // MathJax's glyph widths come from CSS and its fonts load after the
+    // element exists, so the widget changes size once or twice without a
+    // document change. Without another measure, the caret and the next typed
+    // character sit at stale positions and look invisible.
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(layout);
+    setTimeout(layout, 60);
+    setTimeout(layout, 300);
+    try {
+      if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === "function") {
+        document.fonts.ready.then(layout);
+      }
+    } catch (error) {
+      // A document without fonts is not a place this widget runs.
+    }
     return host;
   }
 
