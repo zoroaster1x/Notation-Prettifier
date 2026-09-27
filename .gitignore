@@ -14,6 +14,9 @@ PRIVATE_AGENTS.md
 test/out/
 test/.cache/
 
+# Local debugging helpers (CDP scripts for the running app).
+/tools/
+
 # Editor and tool caches.
 __pycache__/
 *.pyc
