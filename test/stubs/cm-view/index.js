@@ -35,6 +35,12 @@ const ViewPlugin = {
   },
 };
 
-class EditorView {}
+const EditorView = {
+  inputHandler: {
+    of(handler) {
+      return { handler, isInputHandler: true };
+    },
+  },
+};
 
 module.exports = { WidgetType, Decoration, ViewPlugin, EditorView };

@@ -104,8 +104,15 @@ check("swallowed text kept", tagBlock.textContent.indexOf("and the rest of the l
 check("tag becomes a glyph element", Boolean(tagBlock.querySelector(".np-glyph")));
 
 console.log("--- live layer");
-const editorExtension = registered.editorExtensions[0];
+const editorExtensions = registered.editorExtensions[0];
+const editorExtension = Array.isArray(editorExtensions)
+  ? editorExtensions.find((extension) => extension && extension.isViewPlugin)
+  : editorExtensions;
+const inputHandler = Array.isArray(editorExtensions)
+  ? editorExtensions.find((extension) => extension && extension.isInputHandler)
+  : null;
 check("editor extension is a view plugin", Boolean(editorExtension && editorExtension.isViewPlugin), JSON.stringify(editorExtension));
+check("eager shortcut input handler registered", Boolean(inputHandler), JSON.stringify(editorExtensions));
 
 const makeView = (text, ranges) => ({
   state: {
@@ -140,6 +147,31 @@ check("shortcut live decoration", shortcutLive.decorations.length === 1, JSON.st
 const glyphWidget =
   shortcutLive.decorations[0] && shortcutLive.decorations[0].value && shortcutLive.decorations[0].value.spec.widget;
 check("live glyph widget", Boolean(glyphWidget && glyphWidget.replacement === "\u2192"), glyphWidget && glyphWidget.replacement);
+
+console.log("--- eager angle bracket shortcuts");
+const dispatches = [];
+const sourceLine = "5<deg";
+const handlerView = {
+  state: { sliceDoc: (from, to) => sourceLine.slice(from, to) },
+  dispatch: (transaction) => dispatches.push(transaction),
+};
+const handled = inputHandler.handler(handlerView, sourceLine.length, sourceLine.length, ">");
+check("typing the closing bracket is handled", handled === true);
+check(
+  "the whole tag is replaced by the glyph",
+  Boolean(dispatches[0] && dispatches[0].changes.from === 1 && dispatches[0].changes.insert === "\u00b0"),
+  JSON.stringify(dispatches[0])
+);
+const pasteHandled = inputHandler.handler(handlerView, 0, 0, "<deg>");
+check(
+  "pasting the whole tag is handled",
+  pasteHandled === true && Boolean(dispatches[1] && dispatches[1].changes.insert === "\u00b0"),
+  JSON.stringify(dispatches[1])
+);
+check("ordinary input passes through", inputHandler.handler(handlerView, 0, 0, "x") === false);
+plugin.settings.eagerShortcuts = false;
+check("the handler can be switched off", inputHandler.handler(handlerView, sourceLine.length, sourceLine.length, ">") === false);
+plugin.settings.eagerShortcuts = true;
 
 const fenced = new editorExtension.cls(makeView("```\nL = L + F\n```\nafter"));
 check("code fence produces no decorations", fenced.decorations.length === 0, JSON.stringify(fenced.decorations));
@@ -197,6 +229,7 @@ const report = obsidian.Modal.instances[obsidian.Modal.instances.length - 1];
 check("diagnostics modal opened", Boolean(report && report.opened));
 const reportText = report ? report.contentEl.textContent : "";
 check("diagnostics finds the span", reportText.indexOf("Formula spans: 1") !== -1, reportText.slice(0, 220));
+check("diagnostics reports math rendering", reportText.indexOf("Math rendering: ok") !== -1, reportText.slice(0, 260));
 check("diagnostics shows the latex", reportText.indexOf("n^{i} = n'i'") !== -1, reportText.slice(0, 300));
 check("diagnostics names the cursor rule", reportText.indexOf("cursor is inside this span") !== -1, reportText.slice(0, 300));
 

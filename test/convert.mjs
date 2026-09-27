@@ -163,6 +163,10 @@ eq(
 );
 
 console.log("--- things that must stay plain");
+eq("possessive after a number", bake("Y2's bay this week").text, "Y2's bay this week");
+eq("possessive after a digit", bake("the 2's column").text, "the 2's column");
+eq("common contraction", bake("don't do it").text, "don't do it");
+eq("prime after a script", bake("i_1' = i_2").text, "$i_{1}' = i_{2}$");
 eq("prose percentage", bake("It is composed of 98-99% water.").text, "It is composed of 98-99% water.");
 eq("wikilink", bake("[[Extra/Exam_Stuff/Exam info|Exam Information]]").text, "[[Extra/Exam_Stuff/Exam info|Exam Information]]");
 eq("image embed", bake("![[Pasted image 20250101120000.png|188x188]]").text, "![[Pasted image 20250101120000.png|188x188]]");

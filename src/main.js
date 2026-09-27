@@ -18,7 +18,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Modal, Notice, Plugin, Setting, editorLivePreviewField } from "obsidian";
+import { Modal, Notice, Plugin, Setting, editorLivePreviewField, loadMathJax, renderMath } from "obsidian";
 import { createEditorExtension, refreshEditors } from "./editor.js";
 import {
   bakeText,
@@ -28,6 +28,7 @@ import {
   detectShortcutMatches,
   detectSpans,
 } from "./engine.js";
+import { ensureMathJax } from "./math.js";
 import { readingProcessor } from "./reading.js";
 import { compileRules, compileShortcuts, mathWordsFor, shortcutTokenRegex } from "./rules.js";
 import { DEFAULT_SETTINGS, NotationPrettifierSettingTab } from "./settings.js";
@@ -96,6 +97,7 @@ export default class NotationPrettifierPlugin extends Plugin {
     this._cache = null;
     this._configVersion = 0;
     await this.loadSettings();
+    ensureMathJax().then(() => this.refreshPreviews());
     this.registerEditorExtension(createEditorExtension(this));
     this.registerMarkdownPostProcessor(readingProcessor(this));
     this.addCommand({
@@ -312,6 +314,29 @@ export default class NotationPrettifierPlugin extends Plugin {
     }
   }
 
+  mathRenderState() {
+    try {
+      const element = renderMath("n^{2}", false);
+      return element ? "ok (" + element.tagName.toLowerCase() + ")" : "returned nothing";
+    } catch (error) {
+      return "threw: " + (error && error.message ? error.message : String(error));
+    }
+  }
+
+  refreshPreviews() {
+    const app = this.app;
+    if (!app || !app.workspace || !app.workspace.iterateAllLeaves) return;
+    app.workspace.iterateAllLeaves((leaf) => {
+      const view = leaf && leaf.view;
+      if (!view || !view.previewMode || typeof view.previewMode.rerender !== "function") return;
+      try {
+        view.previewMode.rerender(true);
+      } catch (error) {
+        // A view that cannot rerender simply keeps the retry from its elements.
+      }
+    });
+  }
+
   // Explains what the engine sees on one line, which is the fastest way to tell
   // a cursor sitting inside a span from a rule that did not fire.
   checkCurrentLine(editor) {
@@ -329,6 +354,8 @@ export default class NotationPrettifierPlugin extends Plugin {
       "Notation Prettifier " + this.manifest.version,
       "Live preview: " + (this.settings.livePreview ? "on" : "off") + ", Reading view: " + (this.settings.readingView ? "on" : "off"),
       "Editor: " + this.editorMode(editor),
+      "Math rendering: " + this.mathRenderState(),
+      "renderMath: " + (typeof renderMath === "function" ? "exported" : "not exported") + ", loadMathJax: " + (typeof loadMathJax === "function" ? "exported" : "not exported"),
       "",
       "Line " + (cursor.line + 1) + ": " + line,
       "",

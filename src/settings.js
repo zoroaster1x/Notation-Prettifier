@@ -33,6 +33,7 @@ import {
 export const DEFAULT_SETTINGS = {
   livePreview: true,
   readingView: true,
+  eagerShortcuts: true,
   displayFormulaLines: true,
   groups: {
     shortcuts: true,
@@ -58,6 +59,12 @@ const BEHAVIOUR = [
     key: "readingView",
     name: "Reading view",
     description: "Render notation as math in reading view and in exported HTML.",
+  },
+  {
+    key: "eagerShortcuts",
+    name: "Rewrite angle bracket shortcuts as you type",
+    description:
+      "Typing <deg> writes the degree sign into the note immediately, so Markdown never sees a tag and cannot swallow the lines below. The square bracket forms are always safe; turn this off to leave the source untouched.",
   },
   {
     key: "displayFormulaLines",

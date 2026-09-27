@@ -128,7 +128,23 @@ them as regressions to avoid.
   are not disturbed. Code, pre and MathJax containers are skipped.
 * The live layer never edits the document. It replaces a range with a widget
   while the cursor is elsewhere and shows the raw text when the selection
-  intersects the range, exactly like Symbols Prettifier.
+  intersects the range, exactly like Symbols Prettifier. A cursor at either
+  edge of a span still draws it, so a freshly typed formula renders without a
+  click.
+* Obsidian exports `loadMathJax` beside `renderMath`, and `renderMath` throws or
+  returns nothing until the lazy MathJax load finishes. `src/math.js` asks for
+  the load at plugin start and retries a failed render with a timer, swapping
+  the raw text for the typeset element when it succeeds. Without that, every
+  formula stayed raw for the session while the glyph shortcuts kept working,
+  which looked exactly like detection being broken.
+* An angle bracket shortcut such as `<deg>` is an HTML block to the Markdown
+  parser, and a line that starts with one swallows the lines below into one raw
+  HTML block. The editor input handler rewrites a completed `<deg>` to `°` in
+  the document as it is typed (`eagerShortcuts`, on by default), the `[deg]`
+  forms are the HTML safe alternative, and the reading view unwraps a tag
+  element that is already in a file.
+* A prime after a number is only a prime when the number is a script (`i_1'`).
+  Elsewhere it is a possessive: `Y2's`, `2's` and `don't` must stay prose.
 * Settings changes call `refreshEditors`, which dispatches an empty
   transaction to every open editor so the decorations rebuild with the new
   rules.

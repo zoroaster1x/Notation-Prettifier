@@ -22,8 +22,8 @@
 // shortcuts in text nodes and replaces them in place, so nothing else in the
 // block (bold, links, list markers) is disturbed.
 
-import { renderMath } from "obsidian";
 import { detectShortcutMatches, detectSpans, protectedRanges } from "./engine.js";
+import { renderMathInto } from "./math.js";
 
 const SKIP_TAGS = new Set([
   "CODE",
@@ -49,13 +49,7 @@ function shouldSkip(element) {
 function makeMathElement(raw, latex) {
   const host = document.createElement("span");
   host.className = "np-math";
-  try {
-    const rendered = renderMath(latex, false);
-    if (rendered) host.appendChild(rendered);
-    else host.textContent = "$" + latex + "$";
-  } catch (error) {
-    host.textContent = raw;
-  }
+  renderMathInto(host, raw, latex);
   return host;
 }
 

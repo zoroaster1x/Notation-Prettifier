@@ -252,7 +252,7 @@ Shortcuts are literal text replacements. They apply to plain text, headings, lis
 | `<degrees>`, `<degree>`, `<deg>` | `°` |
 | `[degrees]`, `[degree]`, `[deg]` | `°` |
 
-The square bracket degree forms exist because Markdown reads an angle bracket at the start of a line as an HTML tag. A line that begins with `<deg>` can still swallow the lines below into one raw HTML block, so prefer `[deg]`, or keep `<deg>` in the middle of a line. In Reading view the plugin unwraps a tag-like shortcut element and puts the swallowed text back, but the Markdown parser has already made its choice by then.
+The square bracket degree forms exist because Markdown reads an angle bracket at the start of a line as an HTML tag. With **Rewrite angle bracket shortcuts as you type** on (the default), typing the closing `>` replaces `<deg>` with `°` in the document before the parser can see it, so the markdown below never breaks and no slash is needed. Turn the setting off and the source keeps `<deg>`, which works mid-line but can swallow the lines below when it starts one. `[deg]` is always safe. In Reading view the plugin also unwraps a tag element that is already in a note and puts the swallowed text back.
 
 Inside a formula the same input becomes LaTeX instead of a glyph: `A -> B` renders from `$A \to B$`, while `Miosis ->` becomes `Miosis →` in prose. That is deliberate: prose gets the glyph, formulas get LaTeX.
 
@@ -359,6 +359,7 @@ Everything lives under **Settings → Notation Prettifier**.
 |---|---|---|---|
 | Behaviour | Live preview | on | Render notation as math while you type. The note text is not changed; the cursor inside a range shows the raw text again. |
 | | Reading view | on | Render notation as math in Reading view and in exported HTML. |
+| | Rewrite angle bracket shortcuts as you type | on | Typing `<deg>` writes the degree sign into the note immediately, so Markdown never sees a tag and cannot swallow the lines below. Turn it off to leave the source untouched; the `[deg]` forms are always safe. |
 | | Display math for a line that is one formula | on | When baking, a line whose whole content is one formula becomes `$$...$$` instead of `$...$`. Applies to the note and line commands, not to a selection. |
 | Built-in rule groups | Text shortcuts | on | The Symbols Prettifier map plus the degree shortcuts. The list itself is editable below. |
 | | Functions and roots | on | `sin(`, `sqrt ...` and the rest. |
@@ -400,8 +401,9 @@ These are honest gaps, not bugs waiting to be reported.
 - **Table cells are separate.** A `|` ends a span, so a formula cannot span two cells.
 - **A display formula must be alone on its line.** Anything before or after it keeps the inline form.
 - **Multi-letter subscripts follow the source.** `F_LM` becomes `F_{LM}`, and `F_LMx(` is read as `F_{LM}\times(`.
-- **Shortcuts are literal and global.** Choose distinctive literals; a `<` or a single letter would be a bad shortcut. An angle-bracket shortcut at the start of a line can be read as an HTML tag by Markdown and swallow the lines below, so use the square bracket degree forms (`[deg]`) or keep it mid-line.
+- **Shortcuts are literal and global.** Choose distinctive literals; a `<` or a single letter would be a bad shortcut. An angle-bracket shortcut at the start of a line can be read as an HTML tag by Markdown and swallow the lines below, which is why the plugin rewrites those shortcuts as you type by default, and why the square bracket degree forms exist.
 - **A formula is drawn only when the cursor is not strictly inside it.** A cursor at either edge still draws it, so a freshly typed formula renders without moving the cursor; place the cursor inside the span to edit the raw text.
+- **Obsidian loads MathJax lazily.** The plugin asks for it at startup and retries a formula render until it succeeds, so a formula never stays as raw text because the math engine was not ready yet.
 - **Other decoration plugins can overlap.** Disable Symbols Prettifier; other math or decoration plugins may also draw over the same range.
 
 ---
@@ -437,10 +439,10 @@ The synthetic suites need nothing but the repository:
 
 ```bash
 bun esbuild.config.mjs production   # build main.js
-bun test/convert.mjs                # the conversion engine, 67 checks
+bun test/convert.mjs                # the conversion engine, 71 checks
 bun test/editor.mjs                 # the live window scanner, 13 checks
 bun test/examples.mjs               # the documented examples in this README, 44 checks
-bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 49 checks
+bun test/smoke.mjs                  # the built bundle under an Obsidian stub, 56 checks
 bun test/privacy.mjs                # no personal paths in tracked files
 bun test/bench.mjs                  # performance report and bounds
 ```
@@ -467,10 +469,10 @@ Last run on a library of 225 old optometry notes (23,860 lines):
 | Formulas wrapped | 684, across 63 files; 162 files needed no change |
 | Protected regions preserved | 3,317 of 3,317 |
 | Converted lines rendered through the Reading view | 300 lines, 375 inline elements, no empty formula |
-| Engine checks (`test/convert.mjs`) | 67 pass, 0 fail |
+| Engine checks (`test/convert.mjs`) | 71 pass, 0 fail |
 | Live window scanner (`test/editor.mjs`) | 13 pass, 0 fail |
 | Documented examples (`test/examples.mjs`) | 44 pass, 0 fail |
-| Bundle checks (`test/smoke.mjs`) | 49 pass, 0 fail |
+| Bundle checks (`test/smoke.mjs`) | 56 pass, 0 fail |
 | Performance (`test/bench.mjs`) | 0 over bound, 0.37 ms warm keystroke on a 1 MB note |
 
 The documented examples in this README are pinned by `test/examples.mjs`, so a rule change that disagrees with the manual fails the suite.

@@ -28,8 +28,8 @@
 // character note then costs a fraction of a millisecond per keystroke instead
 // of a full document pass.
 
-import { Decoration, ViewPlugin, WidgetType } from "@codemirror/view";
-import { renderMath } from "obsidian";
+import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
+import { renderMathInto } from "./math.js";
 import {
   detectShortcutMatches,
   detectSpans,
@@ -55,13 +55,7 @@ class MathWidget extends WidgetType {
   toDOM() {
     const host = document.createElement("span");
     host.className = "np-math";
-    try {
-      const rendered = renderMath(this.latex, false);
-      if (rendered) host.appendChild(rendered);
-      else host.textContent = "$" + this.latex + "$";
-    } catch (error) {
-      host.textContent = this.raw;
-    }
+    renderMathInto(host, this.raw, this.latex);
     return host;
   }
 
@@ -190,8 +184,61 @@ function createViewPlugin(plugin) {
   );
 }
 
+// Angle bracket shortcuts are the only kind that must not sit in the file:
+// Markdown reads <deg> as an HTML tag and can pull the lines below into one
+// raw HTML block. With this handler the closing ">" turns the tag into the
+// glyph in the document, so the parser never sees it.
+function tagLiterals(plugin) {
+  if (!plugin._tagLiterals) {
+    const map = new Map();
+    for (const shortcut of plugin.shortcuts()) {
+      if (/^<[A-Za-z][A-Za-z0-9-]*>$/.test(shortcut.literal)) {
+        map.set(shortcut.literal, shortcut.replacement);
+      }
+    }
+    plugin._tagLiterals = map;
+  }
+  return plugin._tagLiterals;
+}
+
+function createInputHandler(plugin) {
+  if (!EditorView.inputHandler) return null;
+  return EditorView.inputHandler.of((view, from, to, text) => {
+    if (plugin.settings.eagerShortcuts === false) return false;
+    const literals = tagLiterals(plugin);
+    if (!literals.size) return false;
+
+    const paste = literals.get(text);
+    if (paste !== undefined) {
+      view.dispatch({
+        changes: { from, to, insert: paste },
+        selection: { anchor: from + paste.length },
+        userEvent: "input.type",
+      });
+      return true;
+    }
+
+    if (text !== ">") return false;
+    for (const [literal, replacement] of literals) {
+      const head = literal.slice(0, -1); // without the closing >
+      if (from - head.length < 0) continue;
+      if (view.state.sliceDoc(from - head.length, from) !== head) continue;
+      view.dispatch({
+        changes: { from: from - head.length, to, insert: replacement },
+        selection: { anchor: from - head.length + replacement.length },
+        userEvent: "input.type",
+      });
+      return true;
+    }
+    return false;
+  });
+}
+
 export function createEditorExtension(plugin) {
-  return createViewPlugin(plugin);
+  const extensions = [createViewPlugin(plugin)];
+  const inputHandler = createInputHandler(plugin);
+  if (inputHandler) extensions.push(inputHandler);
+  return extensions;
 }
 
 // An empty transaction makes every open editor rebuild its decorations, which

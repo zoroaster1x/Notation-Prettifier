@@ -692,7 +692,19 @@ function scanSegment(text, from, to, out, mathWords, shortcutToken) {
           flush();
         }
       } else {
-        const primeBase = prev && prev.to === t.from && isSymbolToken(prev);
+        const scriptNumber =
+          prev &&
+          prev.type === "number" &&
+          k > 1 &&
+          tokens[k - 2].type === "op" &&
+          SCRIPT_OPS.has(tokens[k - 2].value) &&
+          tokens[k - 2].to === prev.from;
+        // A prime after a number is only maths when the number is a script
+        // (i_1'). "Y2's" and "2's" are possessives and stay prose.
+        const primeBase =
+          prev &&
+          prev.to === t.from &&
+          (prev.type === "letter" || prev.type === "command" || prev.type === "script" || scriptNumber);
         if (primeBase) {
           if (start < 0) start = k - 1;
           end = k;
