@@ -139,7 +139,9 @@ them as regressions to avoid.
   decoration being empty. `src/math.js` asks for the engine at plugin start,
   warms the app's own renderer with a tiny `$x$` so the stylesheet is attached,
   attaches `MathJax.chtmlStylesheet()` directly when that has not happened, and
-  retries a render until the element holds real content.
+  retries a render until the element holds real content. A container without
+  the glyph stylesheet is refused, so the raw text stays visible and the retry
+  swaps the typeset math in; invisible math must never be possible.
 * An angle bracket shortcut such as `<deg>` is an HTML block to the Markdown
   parser, and a line that starts with one swallows the lines below into one raw
   HTML block. The editor input handler rewrites a completed `<deg>` to `°` in
