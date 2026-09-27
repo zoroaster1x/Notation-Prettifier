@@ -206,3 +206,14 @@ them as regressions to avoid.
 * Body: terse bullets with a component prefix, one line each, only when the
   change needs one.
 * One logical change per commit. Push only when asked, and then push.
+* **A release is cut by CI, never by hand.** Bump the version in
+  `manifest.json`, `package.json` and `versions.json`, then make the head commit
+  with the marker in its message:
+  `Notation Prettifier 1.0.9 [release] 1.0.9`. The marker version must equal
+  `manifest.json`. The Release workflow builds, runs the suites, generates the
+  notes from every commit since the previous release tag followed by
+  `.github/release-template.md` (which carries the funding block), attests the
+  provenance of `main.js`, `manifest.json` and `styles.css`, and publishes the
+  release with those three assets only. `versions.json` stays in the repository
+  and is never a release asset. A push without the marker builds and tests
+  only, which is the normal case.
